@@ -1,5 +1,7 @@
 [workspace]
-members = ["bin/*", "crates/*"]
 resolver = "2"
+members = ["bin/*", "crates/*"]
 
 [workspace.dependencies]
+async-trait = "0.1"
+anyhow = "1.0"

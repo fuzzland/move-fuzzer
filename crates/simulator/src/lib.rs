@@ -1,14 +1,28 @@
-pub fn add(left: u64, right: u64) -> u64 {
-    left + right
-}
+use anyhow::Result;
+use async_trait::async_trait;
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+/// Transaction simulation trait for different blockchains.
+///
+/// Generic over blockchain-specific types:
+/// * `Tx` - Transaction data
+/// * `Id` - Object identifier
+/// * `Obj` - Object type
+/// * `R` - Simulation result
+/// * `T` - Tracer type (must be Send)
+#[async_trait]
+pub trait Simulator<Tx, Id, Obj, R, T>: Send + Sync
+where
+    T: Send,
+{
+    /// Simulate transaction execution.
+    async fn simulate(&self, tx: Tx, override_objects: Vec<(Id, Obj)>, tracer: Option<T>) -> Result<R>;
 
-    #[test]
-    fn it_works() {
-        let result = add(2, 2);
-        assert_eq!(result, 4);
-    }
+    /// Get object by ID.
+    async fn get_object(&self, object_id: &Id) -> Option<Obj>;
+
+    /// Get multiple objects by their IDs.
+    async fn multi_get_objects(&self, object_ids: &[Id]) -> Vec<Option<Obj>>;
+
+    /// Get simulator implementation name.
+    fn name(&self) -> &str;
 }
