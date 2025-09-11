@@ -1,7 +1,10 @@
 [workspace]
+
 resolver = "2"
 members = ["bin/*", "crates/*"]
 
 [workspace.dependencies]
 async-trait = "0.1"
 anyhow = "1.0"
+
+aptos-config = { git = "https://github.com/fuzzland/aptos-core", rev = "1e5097063214a84f794ed2373f66a9d325bf6ca4" }
