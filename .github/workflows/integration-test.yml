@@ -32,14 +32,10 @@ jobs:
       - name: Build fuzzer in release mode
         run: cargo build --release
 
-      - name: Setup Sui binary for Linux
+      - name: Setup Sui environment
         run: |
-          cd scripts
-          zstd -d sui-linux.zst
-          mv sui-linux sui
-          chmod +x sui
-          file sui
-          ls -la sui
+          chmod +x scripts/setup_sui.sh
+          ./scripts/setup_sui.sh
 
       - name: Run integration tests
         run: python scripts/integration_test.py
