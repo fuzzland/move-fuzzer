@@ -1431,13 +1431,9 @@ name = "aptos-private-node"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "aptos-block-executor",
  "aptos-config",
- "aptos-crypto",
  "aptos-db",
  "aptos-executor",
- "aptos-executor-types",
- "aptos-logger",
  "aptos-storage-interface",
  "aptos-types",
  "aptos-vm",
@@ -1447,13 +1443,9 @@ dependencies = [
  "aptos-vm-types",
  "async-trait",
  "bcs 0.1.6",
- "clap 4.5.47",
- "rocksdb",
  "serde",
- "serde_json",
  "serde_yaml 0.9.34+deprecated",
  "simulator",
- "tokio",
 ]
 
 [[package]]

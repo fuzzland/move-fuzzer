@@ -2,15 +2,10 @@ use std::sync::Arc;
 use std::collections::{VecDeque, HashMap};
 use std::path::PathBuf;
 use anyhow::Result;
-use aptos_crypto::HashValue;
 use aptos_types::{
-    account_address::AccountAddress,
     ledger_info::LedgerInfoWithSignatures,
-    transaction::{SignedTransaction, TransactionStatus},
     write_set::WriteSet,
-    contract_event::ContractEvent,
 };
-use aptos_types::fee_statement::FeeStatement;
 use aptos_storage_interface::{DbReader, DbReaderWriter};
 use aptos_db::AptosDB;
 use aptos_config::config::StorageDirPaths;
@@ -23,13 +18,7 @@ use aptos_types::state_store::{state_key::StateKey, StateViewId};
 use aptos_storage_interface::state_store::{state_view::cached_state_view::CachedStateView, state::{LedgerState, State}};
 use aptos_types::state_store::{state_value::StateValue, state_storage_usage::StateStorageUsage, TStateView};
 
-#[derive(Debug, Clone)]
-pub struct StateSummary {
-    pub version: u64,
-    pub block_height: u64,
-    pub root_hash: HashValue,
-    pub timestamp_usecs: u64,
-}
+pub use crate::transaction_result::TransactionResult;
 
 pub struct OverlayStateView {
     base: CachedStateView,
@@ -57,21 +46,10 @@ impl TStateView for OverlayStateView {
     }
 }
 
-#[derive(Debug, Clone)]
-pub struct TransactionResult {
-    pub status: TransactionStatus,
-    pub gas_used: u64,
-    pub write_set: WriteSet,
-    pub events: Vec<ContractEvent>,
-    pub fee_statement: Option<FeeStatement>,
-    pub cache_misses: u64,
-}
-
 pub struct StateManager {
     db: std::sync::RwLock<DbReaderWriter>,
     latest_ledger_info: std::sync::RwLock<Option<LedgerInfoWithSignatures>>,
     overlay: std::sync::RwLock<VecDeque<(StateKey, Option<Vec<u8>>)>>,
-    data_dir: PathBuf,
 }
 
 impl StateManager {
@@ -100,71 +78,11 @@ impl StateManager {
             db: std::sync::RwLock::new(db),
             latest_ledger_info: std::sync::RwLock::new(latest_ledger_info),
             overlay: std::sync::RwLock::new(VecDeque::new()),
-            data_dir: root_dir,
         })
-    }
-
-    pub fn get_state_summary(&self) -> Result<StateSummary> {
-        let ledger_info = self.db.read().unwrap().reader.get_latest_ledger_info()?;
-        let info = ledger_info.ledger_info();
-        Ok(StateSummary {
-            version: info.commit_info().version(),
-            block_height: info.commit_info().round(),
-            root_hash: info.commit_info().executed_state_id(),
-            timestamp_usecs: info.commit_info().timestamp_usecs(),
-        })
-    }
-
-    #[deprecated(note = "StateManager::execute_transaction returns a placeholder result; use TestExecutor::execute_transaction instead")]
-    pub fn execute_transaction(&self, transaction: SignedTransaction) -> Result<TransactionResult> {
-        let current_ledger_info = self.db.read().unwrap().reader.get_latest_ledger_info()
-            .unwrap_or_else(|_| {
-                use aptos_types::ledger_info::{LedgerInfo, LedgerInfoWithSignatures};
-                use aptos_types::block_info::BlockInfo;
-                use aptos_types::aggregate_signature::AggregateSignature;
-                let genesis_block_info = BlockInfo::new(0, 0, HashValue::zero(), HashValue::zero(), 0, 0, None);
-                let genesis_li = LedgerInfo::new(genesis_block_info, HashValue::zero());
-                let dummy_signature = AggregateSignature::empty();
-                LedgerInfoWithSignatures::new(genesis_li, dummy_signature)
-            });
-        let _new_version = current_ledger_info.ledger_info().version() + 1;
-        let result = TransactionResult {
-            status: aptos_types::transaction::TransactionStatus::Keep(
-                aptos_types::transaction::ExecutionStatus::Success
-            ),
-            gas_used: 1000,
-            write_set: aptos_types::write_set::WriteSet::default(),
-            events: vec![],
-            fee_statement: None,
-            cache_misses: 0,
-        };
-        Ok(result)
-    }
-
-    pub fn execute_transactions(&self, transactions: Vec<SignedTransaction>) -> Result<Vec<TransactionResult>> {
-        let mut results = Vec::new();
-        for txn in transactions {
-            let result = self.execute_transaction(txn)?;
-            results.push(result);
-        }
-        Ok(results)
-    }
-
-    pub fn create_snapshot(&self, snapshot_path: &str) -> Result<()> {
-        std::fs::write(snapshot_path, "test-snapshot")?;
-        Ok(())
     }
 
     pub fn db_reader(&self) -> Arc<dyn DbReader> {
         self.db.read().unwrap().reader.clone()
-    }
-
-    pub fn db(&self) -> DbReaderWriter {
-        self.db.read().unwrap().clone()
-    }
-
-    pub fn data_dir(&self) -> PathBuf {
-        self.data_dir.clone()
     }
 
     pub fn clear_overlay(&self) {
@@ -172,29 +90,6 @@ impl StateManager {
         overlay.clear();
     }
 
-    pub fn reload_db_readwrite(&self) -> Result<()> {
-        let db_path = self.data_dir.join("db");
-        let storage_dir_paths = StorageDirPaths::from_path(&db_path);
-        let pruner_config = PrunerConfig::default();
-        let rocksdb_config = aptos_config::config::RocksdbConfigs::default();
-        let new_db = DbReaderWriter::new(AptosDB::open(
-            storage_dir_paths,
-            false,
-            pruner_config,
-            rocksdb_config,
-            false,
-            0,
-            0,
-            None,
-        )?);
-        {
-            let mut guard = self.db.write().unwrap();
-            *guard = new_db;
-        }
-        let latest_ledger_info = self.db_reader().get_latest_ledger_info().ok();
-        *self.latest_ledger_info.write().unwrap() = latest_ledger_info;
-        Ok(())
-    }
 
     pub fn make_overlay_state_view(&self) -> Result<OverlayStateView> {
         let latest_li_opt = self.db_reader().get_latest_ledger_info_option()?;

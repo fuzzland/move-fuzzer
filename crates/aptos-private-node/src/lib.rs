@@ -2,39 +2,42 @@ use std::sync::Arc;
 use anyhow::Result;
 use async_trait::async_trait;
 use aptos_types::transaction::SignedTransaction;
-use aptos_types::transaction::{RawTransaction};
-use aptos_types::transaction::authenticator::TransactionAuthenticator;
+use aptos_types::state_store::state_key::StateKey;
 
-pub mod config;
-pub mod executor;
-pub mod snapshot;
+pub mod aptos_private_node_config;
+pub mod move_executor;
 pub mod state_manager;
+pub mod transaction_result;
 
-pub use config::AptosPrivateNodeConfig;
-pub use executor::{TestExecutor, TransactionValidator};
-pub use snapshot::{SnapshotManager, SnapshotMetadata};
-pub use state_manager::{StateManager, StateSummary, TransactionResult};
+pub use aptos_private_node_config::AptosPrivateNodeConfig;
+pub use move_executor::MoveExecutor;
+pub use state_manager::StateManager;
+pub use transaction_result::TransactionResult;
 pub use simulator::Simulator;
+
+pub type BasicTransactionResult = (
+    bool,                          // success
+    u64,                           // gas_used
+    Vec<(Vec<u8>, Option<Vec<u8>>)>, // write_set
+    Vec<Vec<u8>>,                  // events
+    Option<Vec<u8>>,               // fee_statement_bcs
+    u64,                           // cache_misses
+);
 
 pub struct AptosPrivateNode {
     state_manager: Arc<StateManager>,
-    executor: Arc<TestExecutor>,
+    executor: Arc<MoveExecutor>,
 }
 
 impl AptosPrivateNode {
     /// Create a new private node instance (overlay mode; no disk commits).
     pub fn new(data_dir: &str) -> Result<Self> {
         let state_manager = Arc::new(StateManager::new(data_dir)?);
-        let executor = Arc::new(TestExecutor::new(state_manager.clone()));
+        let executor = Arc::new(MoveExecutor::new(state_manager.clone()));
         Ok(Self {
             state_manager,
             executor,
         })
-    }
-
-    pub async fn initialize_from_genesis(&self) -> Result<()> {
-        self.state_manager.ensure_genesis()?;
-        Ok(())
     }
 
     pub async fn initialize_from_snapshot(&self, snapshot_path: &str) -> Result<()> {
@@ -42,34 +45,13 @@ impl AptosPrivateNode {
         Ok(())
     }
 
-    pub fn get_state_summary(&self) -> Result<StateSummary> {
-        self.state_manager.get_state_summary()
-    }
-
-
-
-    pub async fn execute_transaction(&self, transaction: SignedTransaction) -> Result<TransactionResult> {
-        self.executor.execute_transaction(transaction).await
-    }
-
-    pub async fn execute_raw_transaction(&self, raw_txn: RawTransaction, authenticator: TransactionAuthenticator) -> Result<TransactionResult> {
-        self.executor.execute_raw_transaction(raw_txn, authenticator).await
-    }
-
-    pub async fn execute_bcs_signed_transaction(&self, txn_bytes: &[u8]) -> Result<TransactionResult> {
-        self.executor.execute_bcs_signed_transaction(txn_bytes).await
-    }
-
-    pub fn validate_transaction(&self, transaction: &SignedTransaction) -> Result<()> {
-        let validator = TransactionValidator::new(self.state_manager.clone());
-        validator.validate_transaction(transaction)
-    }
+    
 
     pub fn state_manager(&self) -> Arc<StateManager> {
         self.state_manager.clone()
     }
 
-    pub fn executor(&self) -> Arc<TestExecutor> {
+    pub fn executor(&self) -> Arc<MoveExecutor> {
         self.executor.clone()
     }
 }
@@ -102,54 +84,80 @@ impl Default for AptosPrivateNodeBuilder {
 }
 
 #[async_trait]
-impl Simulator<
-    aptos_types::transaction::SignedTransaction,
-    aptos_types::state_store::state_key::StateKey,
-    Option<Vec<u8>>,
-    TransactionResult,
-    (),
-> for AptosPrivateNode {
+impl Simulator<Vec<u8>, Vec<u8>, Option<Vec<u8>>, BasicTransactionResult, ()> for AptosPrivateNode {
     async fn simulate(
         &self,
-        tx: aptos_types::transaction::SignedTransaction,
-        override_objects: Vec<(
-            aptos_types::state_store::state_key::StateKey,
-            Option<Vec<u8>>,
-        )>,
+        tx_bytes: Vec<u8>,
+        override_objects: Vec<(Vec<u8>, Option<Vec<u8>>)>,
         _tracer: Option<()>,
-    ) -> Result<TransactionResult> {
-        for (key, value_opt) in override_objects {
-            self.state_manager.insert_state(key, value_opt);
+    ) -> Result<BasicTransactionResult> {
+        for (key_bytes, value_opt) in override_objects {
+            if let Ok(key) = bcs::from_bytes::<StateKey>(&key_bytes) {
+                self.state_manager.insert_state(key, value_opt);
+            }
         }
-        self.executor.execute_transaction_with_overlay(tx).await
+        let tx: SignedTransaction = bcs::from_bytes(&tx_bytes)?;
+        let result: TransactionResult = self.executor.execute_transaction_with_overlay(tx).await?;
+
+        let success = matches!(
+            result.status,
+            aptos_types::transaction::TransactionStatus::Keep(
+                aptos_types::transaction::ExecutionStatus::Success
+            )
+        );
+
+        let mut write_set_pairs: Vec<(Vec<u8>, Option<Vec<u8>>)> = Vec::new();
+        for (state_key, op) in result.write_set.write_op_iter() {
+            let key_bytes = bcs::to_bytes(state_key)?;
+            let val_opt = op.bytes().map(|b| b.to_vec());
+            write_set_pairs.push((key_bytes, val_opt));
+        }
+
+        let mut events_bytes: Vec<Vec<u8>> = Vec::new();
+        for ev in result.events.iter() {
+            events_bytes.push(bcs::to_bytes(ev)?);
+        }
+
+        let fee_statement_bcs = match &result.fee_statement {
+            Some(fs) => Some(bcs::to_bytes(fs)?),
+            None => None,
+        };
+
+        Ok((
+            success,
+            result.gas_used,
+            write_set_pairs,
+            events_bytes,
+            fee_statement_bcs,
+            result.cache_misses,
+        ))
     }
 
-    async fn get_object(
-        &self,
-        object_id: &aptos_types::state_store::state_key::StateKey,
-    ) -> Option<Option<Vec<u8>>> {
-        match self.state_manager.read_state(object_id) {
-            Ok(maybe_bytes) => maybe_bytes.map(Some),
+    async fn get_object(&self, object_id_bytes: &Vec<u8>) -> Option<Option<Vec<u8>>> {
+        let key: StateKey = bcs::from_bytes(object_id_bytes).ok()?;
+        match self.state_manager.read_state(&key) {
+            Ok(Some(bytes)) => Some(Some(bytes)),
+            Ok(None) => None,
             Err(_) => None,
         }
     }
 
-    async fn multi_get_objects(
-        &self,
-        object_ids: &[aptos_types::state_store::state_key::StateKey],
-    ) -> Vec<Option<Option<Vec<u8>>>> {
-        let mut results = Vec::with_capacity(object_ids.len());
-        for key in object_ids {
-            let item = match self.state_manager.read_state(key) {
-                Ok(maybe_bytes) => maybe_bytes.map(Some),
-                Err(_) => None,
+    async fn multi_get_objects(&self, object_ids_bytes: &[Vec<u8>]) -> Vec<Option<Option<Vec<u8>>>> {
+        let mut results = Vec::with_capacity(object_ids_bytes.len());
+        for key_bytes in object_ids_bytes {
+            let item = if let Ok(key) = bcs::from_bytes::<StateKey>(key_bytes) {
+                match self.state_manager.read_state(&key) {
+                    Ok(Some(bytes)) => Some(Some(bytes)),
+                    Ok(None) => None,
+                    Err(_) => None,
+                }
+            } else {
+                None
             };
             results.push(item);
         }
         results
     }
 
-    fn name(&self) -> &str {
-        "AptosPrivateNodeSimulator"
-    }
+    fn name(&self) -> &str { "AptosPrivateNodeSimulator" }
 }

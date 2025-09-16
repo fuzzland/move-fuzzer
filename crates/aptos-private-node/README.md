@@ -4,28 +4,27 @@ Below shows how to use this crate via the generic `Simulator` trait.
 
 ```rust
 use aptos_private_node::{AptosPrivateNodeBuilder, Simulator};
-use aptos_types::{state_store::state_key::StateKey, transaction::SignedTransaction};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    // Build and init
     let node = AptosPrivateNodeBuilder::new()
         .with_data_dir("./private-node-data")
         .build()?;
-    node.initialize_from_genesis().await?;
 
-    // Prepare a transaction (fill as needed)
-    let tx: SignedTransaction = todo!("construct a SignedTransaction");
+    // BCS-encoded SignedTransaction
+    let tx_bytes: Vec<u8> = /* ... */ vec![];
 
-    // Run simulate with optional overrides (Id=StateKey, Obj=Option<Vec<u8>>)
-    let result = node
-        .simulate(tx, Vec::<(StateKey, Option<Vec<u8>>)>::new(), Option::<()>::None)
-        .await?;
-    println!("gas_used={}", result.gas_used);
+    // Overrides: (BCS-encoded StateKey bytes, optional raw value)
+    let overrides: Vec<(Vec<u8>, Option<Vec<u8>>)> = vec![];
 
-    // Read a single object
-    let key = StateKey::raw(b"demo_key");
-    let value = node.get_object(&key).await; // Option<Option<Vec<u8>>>
+    // (success, gas_used, write_set, events, fee_statement_bcs, cache_misses)
+    let (_ok, gas_used, _ws, _events, _fee, _miss) =
+        node.simulate(tx_bytes, overrides, None).await?;
+    println!("gas_used={}", gas_used);
+
+    // Read object by BCS-encoded StateKey bytes
+    let key_bytes: Vec<u8> = /* bcs::to_bytes(&state_key)? */ vec![];
+    let value = node.get_object(&key_bytes).await; // None => not found or error
     println!("value={:?}", value);
 
     Ok(())

@@ -7,11 +7,8 @@ license = "Apache-2.0"
 [dependencies]
 # Core Aptos dependencies for state management and execution
 aptos-config = { workspace = true }
-aptos-crypto = { workspace = true }
 aptos-db = { workspace = true }
 aptos-executor = { workspace = true }
-aptos-executor-types = { workspace = true }
-aptos-logger = { workspace = true }
 aptos-storage-interface = { workspace = true }
 aptos-types = { workspace = true }
 aptos-vm = { workspace = true }
@@ -19,23 +16,14 @@ aptos-vm-genesis = { workspace = true }
 aptos-vm-environment = { workspace = true }
 aptos-vm-logging = { workspace = true }
 aptos-vm-types = { workspace = true }
-aptos-block-executor = { workspace = true }
 
 # Basic utilities
 anyhow = "1.0"
-clap = { version = "4.0", features = ["derive"] }
 serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
 serde_yaml = "0.9"
-tokio = { version = "1.0", features = ["full"] }
 bcs = "0.1"
 async-trait = "0.1"
 simulator = { path = "../simulator" }
-
-# State management
-rocksdb = "0.24"
-
-#[workspace]
 
 [features]
 default = []
