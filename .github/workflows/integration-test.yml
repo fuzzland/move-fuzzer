@@ -16,6 +16,9 @@ jobs:
       with:
         toolchain: stable
 
+    - name: Rust Cache
+      uses: Swatinem/rust-cache@v2
+
     - name: Setup Python
       uses: actions/setup-python@v4
       with:
