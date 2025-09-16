@@ -123,14 +123,10 @@ class IntegrationTester:
             result = subprocess.run(
                 ["cargo", "build", "--release"],
                 cwd=self.root_dir,
-                capture_output=True,
-                text=True,
-                timeout=300  # 5 minutes for build
+                timeout=600  # 10 minutes for build
             )
             if result.returncode != 0:
                 self.log("Build failed:", "ERROR")
-                if result.stderr:
-                    self.log(result.stderr, "ERROR")
                 return False
 
             self.log("Build completed successfully", "SUCCESS")
