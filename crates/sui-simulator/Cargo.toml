@@ -1,0 +1,40 @@
+[package]
+name = "sui-simulator"
+version.workspace = true
+edition.workspace = true
+
+
+[dependencies]
+async-trait = "0.1"
+dashmap = "5.5"
+eyre = "0.6"
+thiserror = "2.0"
+tokio = { version = "1.47", features = ["full"] }
+parking_lot = "0.12"
+rand = "0.9"
+tracing = "0.1"
+tracing-subscriber = "0.3"
+prometheus = "0.13"
+serde = { version = "1.0", features = ["derive"] }
+
+sui-move-core-types = { workspace = true }
+sui-move-vm-config = { workspace = true }
+sui-move-vm-runtime = { workspace = true }
+sui-move-vm-types = { workspace = true }
+sui-move-binary-format = { workspace = true }
+sui-move-trace-format = { workspace = true }
+sui-core = { workspace = true }
+sui-execution = { workspace = true, features = ["tracing"] }
+sui-sdk = { workspace = true }
+sui-types = { workspace = true }
+sui-storage = { workspace = true }
+sui-protocol-config = { workspace = true }
+sui-config = { workspace = true }
+sui-json-rpc = { workspace = true }
+sui-json-rpc-types = { workspace = true }
+sui-tracer = { path = "../sui-tracer" }
+
+
+[dev-dependencies]
+tempfile = "3.20"
+tokio-test = "0.4"

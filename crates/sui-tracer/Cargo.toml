@@ -1,0 +1,14 @@
+[package]
+name = "sui-tracer"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+anyhow = { workspace = true, features = ["backtrace"] }
+sui-move-vm-types = { workspace = true }
+sui-move-trace-format = { workspace = true }
+sui-move-binary-format = { workspace = true }
+sui-move-core-types = { workspace = true }
+tracing = { workspace = true }
+serde = { workspace = true }
+schemars = { workspace = true }
