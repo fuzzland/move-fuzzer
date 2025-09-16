@@ -1,0 +1,34 @@
+[package]
+name = "sui-fuzzer"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+fuzzer-core = { path = "../fuzzer-core" }
+
+# Sui-specific dependencies
+sui-sdk = { workspace = true }
+sui-types = { workspace = true }
+sui-config = { workspace = true }
+sui-json-rpc-types = { workspace = true }
+sui-move-core-types = { workspace = true }
+sui-move-vm-types = { workspace = true }
+sui-move-binary-format = { workspace = true }
+sui-move-bytecode-utils = { workspace = true }
+
+# Sui external dependencies
+sui-simulator = { path = "../sui-simulator" }
+sui-tracer = { path = "../sui-tracer" }
+
+# Basic utilities
+anyhow = { workspace = true }
+async-trait = { workspace = true }
+tokio = { workspace = true }
+tracing = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+bcs = { workspace = true }
+eyre = { workspace = true }
+thiserror = { workspace = true }
+hex = { workspace = true }
+rand = { workspace = true }

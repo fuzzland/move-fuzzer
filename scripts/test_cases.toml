@@ -1,0 +1,38 @@
+[localnet]
+rpc_url = "http://localhost:9000"
+start_timeout = 30
+sui_binary = "./scripts/sui"
+
+[[test_cases]]
+name = "integer_shl"
+function = "integer_shl"
+args = "5 2"
+expected_violations = true
+iterations = 10000
+timeout = 30
+
+[[test_cases]]
+name = "vector_shl"
+function = "vector_shl"
+args = "[5,2]"
+expected_violations = true
+iterations = 10000
+timeout = 30
+
+[[test_cases]]
+name = "generic_shl"
+function = "generic_shl"
+type_args = "u64 u8"
+args = "5 2"
+expected_violations = true
+iterations = 10000
+timeout = 30
+
+[[test_cases]]
+name = "mutable_shared_struct_shl"
+function = "mutable_shared_struct_shl"
+# Object ID will be filled at runtime
+args = ""
+expected_violations = true
+iterations = 10000
+timeout = 30

@@ -1,0 +1,12 @@
+# For HTTP requests
+requests==2.31.0
+# For simple command execution
+sh==2.0.6
+# For process and port management
+psutil==7.0.0
+# For beautiful terminal output and tables (replaces colorama + tabulate)
+rich==14.1.0
+# For template-based report generation
+jinja2==3.1.2
+# For TOML configuration parsing
+toml==0.10.2
