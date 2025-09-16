@@ -24,3 +24,7 @@ target
 # Added by cargo
 
 /target
+
+# test directories
+**/test-ledger*
+**/example-data*
