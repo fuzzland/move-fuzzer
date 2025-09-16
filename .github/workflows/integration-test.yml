@@ -44,6 +44,4 @@ jobs:
 
       - name: Display test report
         if: always()
-        run: |
-          echo "## Integration Test Report" >> $GITHUB_STEP_SUMMARY
-          cat test-report.md >> $GITHUB_STEP_SUMMARY
+        run: cat test-report.md >> $GITHUB_STEP_SUMMARY
