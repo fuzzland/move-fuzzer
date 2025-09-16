@@ -2,36 +2,46 @@ name: Integration Test
 
 on:
   pull_request:
-    branches: [ master, main ]
+    branches: [master, main]
 
 jobs:
   test:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v3
+      - uses: actions/checkout@v3
+        with:
+          lfs: true
 
-    - name: Setup Rust
-      uses: actions-rs/toolchain@v1
-      with:
-        toolchain: stable
+      - name: Setup Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
 
-    - name: Rust Cache
-      uses: Swatinem/rust-cache@v2
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          cache-on-failure: true
 
-    - name: Setup Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.x'
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.x"
 
-    - name: Install Python dependencies
-      run: pip install -r scripts/requirements.txt
+      - name: Install Python dependencies
+        run: pip install -r scripts/requirements.txt
 
-    - name: Run integration tests
-      run: python scripts/integration_test.py
+      - name: Build fuzzer in release mode
+        run: cargo build --release
 
-    - name: Display test report
-      if: always()
-      run: |
-        echo "## Integration Test Report" >> $GITHUB_STEP_SUMMARY
-        cat test-report.md >> $GITHUB_STEP_SUMMARY
+      - name: Setup Sui environment
+        run: |
+          chmod +x scripts/setup_sui.sh
+          ./scripts/setup_sui.sh
+
+      - name: Run integration tests
+        run: python scripts/integration_test.py
+
+      - name: Display test report
+        if: always()
+        run: cat test-report.md >> $GITHUB_STEP_SUMMARY
