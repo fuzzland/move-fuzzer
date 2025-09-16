@@ -1,1 +1,2 @@
 scripts/sui filter=lfs diff=lfs merge=lfs -text
+scripts/sui-linux.zst filter=lfs diff=lfs merge=lfs -text
