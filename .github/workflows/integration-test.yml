@@ -7,6 +7,9 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
 
     steps:
       - uses: actions/checkout@v3
@@ -31,7 +34,7 @@ jobs:
       - name: Install Python dependencies
         run: pip install -r scripts/requirements.txt
 
-      - name: Build fuzzer in release mode
+      - name: Build fuzzer
         run: cargo build --release
 
       - name: Setup Sui environment
@@ -44,4 +47,7 @@ jobs:
 
       - name: Display test report
         if: always()
-        run: cat test-report.md >> $GITHUB_STEP_SUMMARY
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          path: test-report.md
+          header: move-fuzzer-test-report
