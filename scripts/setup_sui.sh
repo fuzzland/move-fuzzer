@@ -18,7 +18,7 @@ if [[ "$OSTYPE" == "linux-gnu"* ]] && [[ -f "$SCRIPT_DIR/sui-linux.zst" ]]; then
         exit 1
     fi
 
-    zstd -d sui-linux.zst -o sui
+    zstd -d -f sui-linux.zst -o sui
     chmod +x sui
 
     # Verify the binary
