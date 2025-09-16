@@ -35,14 +35,10 @@ impl AptosPrivateNode {
         })
     }
 
-    // removed new_with_persistence (disk persistence is no longer supported)
-
     pub async fn initialize_from_genesis(&self) -> Result<()> {
         self.state_manager.ensure_genesis()?;
         Ok(())
     }
-
-    // RPC fork is not supported in this crate. See README for rationale.
 
     pub async fn initialize_from_snapshot(&self, snapshot_path: &str) -> Result<()> {
         self.state_manager.load_readonly_from_dir(snapshot_path)?;
@@ -125,12 +121,9 @@ impl Simulator<
         )>,
         _tracer: Option<()>,
     ) -> Result<TransactionResult> {
-        // Apply overrides into the in-memory overlay (latest write wins)
         for (key, value_opt) in override_objects {
             self.state_manager.insert_state(key, value_opt);
         }
-
-        // Execute against overlay-backed StateView so overrides take effect
         self.executor.execute_transaction_with_overlay(tx).await
     }
 

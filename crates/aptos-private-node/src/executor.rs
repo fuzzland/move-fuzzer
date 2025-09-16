@@ -44,7 +44,6 @@ pub struct TestExecutor {
 impl TestExecutor {
     /// Create a new test executor
     pub fn new(state_manager: Arc<StateManager>) -> Self {
-        // Create a simple dummy state view for VM initialization
         let dummy_state = State::new_empty();
         let dummy_state_view = CachedStateView::new_dummy(&dummy_state);
         let env = AptosEnvironment::new(&dummy_state_view);
@@ -58,12 +57,10 @@ impl TestExecutor {
         }
     }
 
-    /// Execute a single transaction with real VM
+    /// Execute a single transaction
     pub async fn execute_transaction(&self, transaction: SignedTransaction) -> Result<TransactionResult> {
-        // Ensure we have genesis
         self.state_manager.ensure_genesis()?;
 
-        // Always use a single in-memory executor (no disk persistence path)
         let dbrw = self.state_manager.db();
         let mut guard = self.persistent_block_executor.lock().unwrap();
         if guard.is_none() {
@@ -71,25 +68,21 @@ impl TestExecutor {
         }
         let executor_ref: &BlockExecutor<AptosVMBlockExecutor> = guard.as_ref().as_ref().unwrap();
 
-        // Determine parent block id: use last in-memory block when not persisting, else committed
         let parent_block_id = self
             .last_block_id
             .lock()
             .unwrap()
             .unwrap_or_else(|| executor_ref.committed_block_id());
 
-        // Build a minimal block with a single user transaction
         let block_id = HashValue::random();
         let txns: Vec<SignatureVerifiedTransaction> = into_signature_verified_block(vec![aptos_types::transaction::Transaction::UserTransaction(transaction.clone())]);
         let auxiliary_infos = vec![AuxiliaryInfo::new(aptos_types::transaction::PersistedAuxiliaryInfo::None, None)];
         let block: ExecutableBlock = (block_id, txns.clone(), auxiliary_infos).into();
 
-        // Execute and update state using BlockExecutor backed by DB view
         executor_ref.execute_and_update_state(block, parent_block_id, BlockExecutorConfigFromOnchain::new_no_block_limit())?;
         let compute_result = executor_ref.ledger_update(block_id, parent_block_id)?;
         let outputs = &compute_result.execution_output.to_commit.transaction_outputs;
 
-        // Extract outputs to build TransactionResult
         let events = outputs
             .get(0)
             .map(|o| o.events().to_vec())
@@ -101,35 +94,26 @@ impl TestExecutor {
         let gas_used = outputs.get(0).map(|o| o.gas_used()).unwrap_or(0);
         let write_set = outputs.get(0).map(|o| o.write_set().clone()).unwrap_or_default();
 
-        // Extract fee statement if present from committed output
         let fee_statement = outputs
             .get(0)
             .and_then(|o| o.try_extract_fee_statement().ok().flatten());
-        // No simple cache miss metric available from Aptos executor here; default to 0
         let cache_misses: u64 = 0;
 
-        // If disk persistence is disabled, do NOT commit. Keep block in executor's in-memory block tree
-        // and apply writes to the overlay for external reads.
-        // Apply to overlay for external reads
         self.state_manager.apply_write_set_to_overlay(&write_set);
         *self.last_block_id.lock().unwrap() = Some(block_id);
 
         Ok(TransactionResult { status, gas_used: gas_used as u64, write_set, events, fee_statement, cache_misses })
     }
 
-    /// Execute a single transaction using an overlay-backed StateView for fuzzing scenarios.
-    /// This bypasses the block executor and runs the VM directly against an overlay+DB view.
+    /// Execute a single transaction against an overlay-backed StateView.
     pub async fn execute_transaction_with_overlay(&self, transaction: SignedTransaction) -> Result<TransactionResult> {
-        // Ensure genesis is initialized
         self.state_manager.ensure_genesis()?;
 
-        // Build overlay-backed view
         let overlay_view = self.state_manager.make_overlay_state_view()?;
         let env = AptosEnvironment::new(&overlay_view);
         let mut vm = AptosVM::new(&env, &overlay_view);
         let log_context = AdapterLogSchema::new(overlay_view.id(), 0);
 
-        // Execute directly via VM
         let resolver = overlay_view.as_move_resolver();
         let code_storage = overlay_view.as_aptos_code_storage(&env);
         let aux = aptos_types::transaction::AuxiliaryInfo::new(
@@ -144,7 +128,6 @@ impl TestExecutor {
             &aux,
         );
 
-        // Materialize TransactionOutput
         let txn_output = vm_output
             .try_materialize_into_transaction_output(&resolver)
             .expect("Materializing aggregator deltas should not fail");
@@ -156,13 +139,12 @@ impl TestExecutor {
         let fee_statement = txn_output.try_extract_fee_statement().ok().flatten();
         let cache_misses: u64 = 0;
 
-        // Project writes to overlay for subsequent external reads
         self.state_manager.apply_write_set_to_overlay(&write_set);
 
         Ok(TransactionResult { status, gas_used: gas_used as u64, write_set, events, fee_statement, cache_misses })
     }
 
-    /// Execute a transaction built from a raw transaction plus authenticator (more primitive than SignedTransaction)
+    /// Execute a transaction built from a raw transaction and authenticator
     pub async fn execute_raw_transaction(
         &self,
         raw_txn: RawTransaction,
@@ -172,7 +154,7 @@ impl TestExecutor {
         self.execute_transaction(signed).await
     }
 
-    /// Execute a BCS-encoded SignedTransaction (convenience for external callers)
+    /// Execute a BCS-encoded SignedTransaction
     pub async fn execute_bcs_signed_transaction(&self, txn_bytes: &[u8]) -> Result<TransactionResult> {
         let signed: SignedTransaction = bcs::from_bytes(txn_bytes)?;
         self.execute_transaction(signed).await
@@ -180,7 +162,6 @@ impl TestExecutor {
 
     /// Execute a batch of transactions
     pub async fn execute_transactions(&self, transactions: Vec<SignedTransaction>) -> Result<Vec<TransactionResult>> {
-
         let mut results = Vec::new();
         for transaction in transactions {
             let result = self.execute_transaction(transaction).await?;
@@ -190,9 +171,8 @@ impl TestExecutor {
         Ok(results)
     }
 
-    /// Execute a block of transactions using block executor
+    /// Execute a block of transactions
     pub async fn execute_block(&self, transactions: ExecutableTransactions) -> Result<HashValue> {
-
         match transactions {
             ExecutableTransactions::Unsharded(txns) => {
                 let converted_txns: Vec<SignedTransaction> = txns.into_iter().map(|txn| {
@@ -204,7 +184,6 @@ impl TestExecutor {
                 self.execute_unsharded_block(converted_txns).await
             }
             ExecutableTransactions::Sharded(partitioned_txns) => {
-                // For now, extract all transactions from partitioned
                 let analyzed_txns = aptos_types::block_executor::partitioner::PartitionedTransactions::flatten(partitioned_txns);
                 let converted_txns: Vec<SignedTransaction> = analyzed_txns.into_iter().map(|txn| {
                     match txn.expect_p_txn().0.into_inner() {
@@ -219,7 +198,6 @@ impl TestExecutor {
 
     /// Execute unsharded block
     async fn execute_unsharded_block(&self, transactions: Vec<SignedTransaction>) -> Result<HashValue> {
-        // Create state view
         let latest_ledger_info = self.state_manager.db_reader().get_latest_ledger_info_option()?.unwrap();
         let state = State::new_at_version(Some(latest_ledger_info.ledger_info().version()), aptos_types::state_store::state_storage_usage::StateStorageUsage::zero());
         let ledger_state = LedgerState::new(state.clone(), state);
@@ -230,16 +208,12 @@ impl TestExecutor {
             ledger_state.latest().clone(),
         )?;
 
-        // Create transaction provider
         let auxiliary_infos = vec![AuxiliaryInfo::new(
             aptos_types::transaction::PersistedAuxiliaryInfo::None,
             None,
         ); transactions.len()];
 
-        // For now, execute transactions individually
-        // TODO: Implement proper block execution when block executor API is stable
-        let _auxiliary_infos = auxiliary_infos; // Suppress unused warning
-        // transactions已经是SignedTransaction类型的Vec，直接使用
+        let _auxiliary_infos = auxiliary_infos;
         let signed_txns = transactions;
         let results = self.execute_transactions(signed_txns).await?;
 
@@ -282,12 +256,8 @@ impl TransactionValidator {
 
     /// Validate a transaction with comprehensive checks
     pub fn validate_transaction(&self, transaction: &SignedTransaction) -> Result<()> {
-
-        // 1. Signature verification
         transaction.verify_signature()
             .map_err(|e| anyhow::anyhow!("Signature verification failed: {:?}", e))?;
-
-        // 2. Basic transaction structure validation
         match transaction.payload() {
             aptos_types::transaction::TransactionPayload::Script(_) |
             aptos_types::transaction::TransactionPayload::ModuleBundle(_) |
@@ -297,8 +267,6 @@ impl TransactionValidator {
                 // Valid payload
             }
         }
-
-        // 3. Gas limits validation
         if transaction.max_gas_amount() == 0 {
             return Err(anyhow::anyhow!("Max gas amount cannot be zero"));
         }
