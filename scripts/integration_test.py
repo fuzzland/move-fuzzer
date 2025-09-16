@@ -28,7 +28,6 @@ class IntegrationTester:
         self.localnet_process = None
         self.package_id = None
         self.shared_object_id = None
-        self.nested_shared_object_id = None
         self.test_results = []
 
         # Load test configuration
@@ -492,38 +491,7 @@ class IntegrationTester:
                     self.log("Output snippet (first 1000 chars):", "DEBUG")
                     self.log(result.stdout[:1000], "DEBUG")
 
-            # Create nested shared demo struct
-            result = self.run_sui_command(
-                "client", "call",
-                "--package", self.package_id,
-                "--module", "shl_demo",
-                "--function", "create_shared_nested_demo_struct",
-                "--args", "15", "3", "2"
-            )
-
-            # Log full output for debugging
-            self.log("Create nested shared demo struct output:", "DEBUG")
-            self.log(result.stdout, "DEBUG")
-
-            # Extract nested object ID from Created Objects section
-            match = re.search(created_pattern, result.stdout, re.DOTALL | re.IGNORECASE)
-
-            if match:
-                self.nested_shared_object_id = match.group(1)
-                self.log(f"Extracted nested object ID: {self.nested_shared_object_id}", "DEBUG")
-            else:
-                # Fallback: try simpler pattern and take first match
-                matches = re.findall(fallback_pattern, result.stdout, re.IGNORECASE)
-                if matches:
-                    self.nested_shared_object_id = matches[0]  # Take first match
-                    self.log(f"Extracted nested object ID (fallback): {self.nested_shared_object_id}", "DEBUG")
-                else:
-                    self.log("Could not extract nested object ID from output", "ERROR")
-                    self.log("Output snippet (first 1000 chars):", "DEBUG")
-                    self.log(result.stdout[:1000], "DEBUG")
-
             self.log(f"Created shared object: {self.shared_object_id}", "SUCCESS")
-            self.log(f"Created nested shared object: {self.nested_shared_object_id}", "SUCCESS")
             return True
 
         except Exception as e:
@@ -541,8 +509,6 @@ class IntegrationTester:
         args = test_case.get("args", "")
         if function == "mutable_shared_struct_shl":
             args = self.shared_object_id
-        elif function == "nested_mutable_shared_struct_shl":
-            args = self.nested_shared_object_id
 
         self.log(f"Running test: {name} ({iterations:,} iterations)")
         start_time = time.time()

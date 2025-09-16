@@ -84,16 +84,6 @@ impl MutationStrategy for RandomStrategy {
                     let index = self.rng.random_range(0..vec.len());
                     self.mutate(&mut vec[index])?;
                 }
-                CloneableValue::NestedStruct { mutated_fields, .. } => {
-                    // Mutate a random field in the nested struct
-                    if !mutated_fields.is_empty() {
-                        let field_names: Vec<_> = mutated_fields.keys().cloned().collect();
-                        let selected_field = &field_names[self.rng.random_range(0..field_names.len())];
-                        if let Some(field_value) = mutated_fields.get_mut(selected_field) {
-                            self.mutate(field_value)?;
-                        }
-                    }
-                }
                 _ => {} // No mutation for unsupported types
             }
         }
@@ -106,8 +96,7 @@ impl MutationStrategy for RandomStrategy {
 
         value.is_integer() ||
             matches!(value, CloneableValue::Bool(_) | CloneableValue::Address(_)) ||
-            matches!(value, CloneableValue::Vector(v) if !v.is_empty()) ||
-            matches!(value, CloneableValue::NestedStruct { mutated_fields, .. } if !mutated_fields.is_empty())
+            matches!(value, CloneableValue::Vector(v) if !v.is_empty())
     }
 
     fn description(&self) -> &'static str {

@@ -149,9 +149,6 @@ impl SuiAdapter {
                 ptb.obj(obj_arg).with_context(|| "Failed to add object argument")
             }
 
-            CloneableValue::NestedStruct { .. } => {
-                bail!("NestedStruct cannot be used directly as transaction argument")
-            }
         }
     }
 

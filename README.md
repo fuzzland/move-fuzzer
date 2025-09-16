@@ -68,14 +68,6 @@ scripts/sui client call \
     --function create_shared_demo_struct \
     --args 12 2
 # object_id: 0xea0be34b0ec5960d42c52254cfb1bace46381c7bcae7e1f81421e2d4521bf226
-
-# Create nested shared struct (value=15, shift_amount=3, multiplier=2)
-scripts/sui client call \
-    --package 0xa175592bdf05b7da39b2adb9d4509db89573bdca95d5a635ded388a592991a91 \
-    --module shl_demo \
-    --function create_shared_nested_demo_struct \
-    --args 15 3 2
-# object_id: 0x5e1eefeb9e8fa8c6fd8bdfb56935a52525f5bf08a2c6dce2cd2f459e5ce9e0dd
 ```
 
 ### Fuzzing Commands
@@ -113,33 +105,4 @@ RUST_LOG=debug cargo run -p fuzzer -- sui \
     --module shl_demo \
     --function mutable_shared_struct_shl \
     --args 0xea0be34b0ec5960d42c52254cfb1bace46381c7bcae7e1f81421e2d4521bf226
-
-# mutable nested shared struct
-RUST_LOG=debug cargo run -p fuzzer -- sui \
-    --rpc-url http://localhost:9000 \
-    --package 0xa175592bdf05b7da39b2adb9d4509db89573bdca95d5a635ded388a592991a91 \
-    --module shl_demo \
-    --function nested_mutable_shared_struct_shl \
-    --args 0x5e1eefeb9e8fa8c6fd8bdfb56935a52525f5bf08a2c6dce2cd2f459e5ce9e0dd
-```
-
-### Output Example
-
-```log
-❗️ SHIFT VIOLATION DETECTED
-
-Target Function: 0xa175592bdf05b7da39b2adb9d4509db89573bdca95d5a635ded388a592991a91::shl_demo::integer_shl
-Iteration: 2/1000000
-Execution Time: 0.08s
-
-VIOLATION DETAILS:
-- Type: Shift Overflow
-- Location: a175592bdf05b7da39b2adb9d4509db89573bdca95d5a635ded388a592991a91::shl_demo::integer_shl (pc: 2)
-- Value: U64(65)
-- Shift Amount: 255
-- Instruction: Shl
-
-FUNCTION PARAMETERS:
-- Parameter[0]: u64 = U64(65)
-- Parameter[1]: u8 = U8(255)
 ```

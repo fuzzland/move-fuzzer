@@ -36,12 +36,3 @@ args = ""
 expected_violations = true
 iterations = 10000
 timeout = 30
-
-[[test_cases]]
-name = "nested_mutable_shared_struct_shl"
-function = "nested_mutable_shared_struct_shl"
-# Object ID will be filled at runtime
-args = ""
-expected_violations = true
-iterations = 10000
-timeout = 30

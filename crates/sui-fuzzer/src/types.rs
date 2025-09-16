@@ -1,11 +1,10 @@
-use std::collections::BTreeMap;
 use std::convert::TryInto;
 use std::str::FromStr;
 use std::time::Duration;
 
 use fuzzer_core::ChainValue;
 use serde::{Deserialize, Serialize};
-use sui_json_rpc_types::{SuiMoveNormalizedType, SuiMoveStruct, SuiObjectData, SuiObjectDataOptions};
+use sui_json_rpc_types::{SuiMoveNormalizedType, SuiObjectData, SuiObjectDataOptions};
 use sui_move_core_types::u256::U256;
 use sui_sdk::SuiClient;
 use sui_simulator::SimulateResult;
@@ -81,10 +80,6 @@ pub enum CloneableValue {
         initial_object: Option<Object>,
         cached_object: Option<Object>,
     },
-    NestedStruct {
-        original_struct: SuiMoveStruct,
-        mutated_fields: BTreeMap<String, CloneableValue>,
-    },
 }
 
 impl CloneableValue {
@@ -101,7 +96,6 @@ impl CloneableValue {
             CloneableValue::Vector(_) => "vector",
             CloneableValue::UID { .. } => "uid",
             CloneableValue::StructObject { .. } => "struct_object",
-            CloneableValue::NestedStruct { .. } => "nested_struct",
         }
     }
 }
@@ -123,9 +117,6 @@ impl fuzzer_core::ChainValue for CloneableValue {
     fn is_integer_vector(&self) -> bool {
         match self {
             CloneableValue::Vector(vec) => vec.iter().all(CloneableValue::is_integer),
-            CloneableValue::NestedStruct { mutated_fields, .. } => mutated_fields
-                .values()
-                .any(|field| field.is_integer() || field.is_integer_vector()),
             _ => false,
         }
     }
@@ -133,9 +124,6 @@ impl fuzzer_core::ChainValue for CloneableValue {
     fn contains_integers(&self) -> bool {
         match self {
             CloneableValue::Vector(vec) => vec.iter().any(|v| v.is_integer()),
-            CloneableValue::NestedStruct { mutated_fields, .. } => mutated_fields
-                .values()
-                .any(|field| field.is_integer() || field.contains_integers()),
             _ => self.is_integer(),
         }
     }
@@ -169,7 +157,6 @@ impl fuzzer_core::ChainValue for CloneableValue {
             CloneableValue::Vector(_) => "vector",
             CloneableValue::UID { .. } => "uid",
             CloneableValue::StructObject { .. } => "struct_object",
-            CloneableValue::NestedStruct { .. } => "nested_struct",
         }
     }
 }
