@@ -1,6 +1,3 @@
-// Copyright © Aptos Foundation
-// SPDX-License-Identifier: Apache-2.0
-
 use std::sync::{Arc, Mutex as StdMutex};
 use anyhow::Result;
 use aptos_crypto::HashValue;

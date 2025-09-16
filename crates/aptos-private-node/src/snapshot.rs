@@ -1,6 +1,3 @@
-// Copyright © Aptos Foundation
-// SPDX-License-Identifier: Apache-2.0
-
 use std::path::Path;
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
