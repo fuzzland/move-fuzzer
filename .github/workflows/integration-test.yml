@@ -29,6 +29,9 @@ jobs:
       - name: Install Python dependencies
         run: pip install -r scripts/requirements.txt
 
+      - name: Build fuzzer in release mode
+        run: cargo build --release
+
       - name: Setup Sui binary for Linux
         run: |
           cd scripts
