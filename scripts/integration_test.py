@@ -678,23 +678,19 @@ class IntegrationTester:
         console.print(table)
 
         # Generate Markdown report using Jinja2
-        report_template = Template("""# Move Fuzzer Integration Test Report
+        report_template = Template("""## SUI Fuzzer Integration Test Report
 
 **Generated**: {{ timestamp }}
 **Package ID**: {{ package_id }}
 **Overall Result**: {{ "PASSED" if all_passed else "FAILED" }}
 
-## Test Results
+### Test Results
 
 | Test | Passed | Time |
 |------|--------|------|
 {%- for result in results %}
 | {{ result.name }} | {{ "✓" if result.passed else "✗" }} | {{ "%.1f"|format(result.execution_time) }}s |
 {%- endfor %}
-
-## Legend
-- **Passed**: Test executed successfully and violations matched expectations
-- **Time**: Test execution duration in seconds
 """)
 
         # Prepare template data
