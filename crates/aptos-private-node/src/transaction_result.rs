@@ -1,7 +1,7 @@
-use aptos_types::transaction::TransactionStatus;
-use aptos_types::write_set::WriteSet;
 use aptos_types::contract_event::ContractEvent;
 use aptos_types::fee_statement::FeeStatement;
+use aptos_types::transaction::TransactionStatus;
+use aptos_types::write_set::WriteSet;
 
 #[derive(Debug, Clone)]
 pub struct TransactionResult {
@@ -12,5 +12,3 @@ pub struct TransactionResult {
     pub fee_statement: Option<FeeStatement>,
     pub cache_misses: u64,
 }
-
-

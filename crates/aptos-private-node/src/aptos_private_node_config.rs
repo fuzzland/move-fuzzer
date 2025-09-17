@@ -1,6 +1,7 @@
-use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::Path;
+
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AptosPrivateNodeConfig {

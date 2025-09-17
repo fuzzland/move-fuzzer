@@ -1,2 +1,3 @@
 [build]
+# aptos-core requirements to access tokio’s experimental APIs.
 rustflags = ["--cfg", "tokio_unstable"]

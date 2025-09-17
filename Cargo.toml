@@ -6,11 +6,6 @@ members = ["bin/*", "crates/*"]
 [workspace.dependencies]
 async-trait = "0.1"
 anyhow = "1.0"
-poem-openapi = "=5.1.2"
-poem-openapi-derive = "=5.1.1"
-darling = "=0.20.10"
-darling_core = "=0.20.10"
-darling_macro = "=0.20.10"
 
 aptos-config = { git = "https://github.com/fuzzland/aptos-core", rev = "1e5097063214a84f794ed2373f66a9d325bf6ca4" }
 aptos-db = { git = "https://github.com/fuzzland/aptos-core", rev = "1e5097063214a84f794ed2373f66a9d325bf6ca4" }
@@ -23,5 +18,7 @@ aptos-vm-environment = { git = "https://github.com/fuzzland/aptos-core", rev = "
 aptos-vm-logging = { git = "https://github.com/fuzzland/aptos-core", rev = "1e5097063214a84f794ed2373f66a9d325bf6ca4" }
 aptos-vm-types = { git = "https://github.com/fuzzland/aptos-core", rev = "1e5097063214a84f794ed2373f66a9d325bf6ca4" }
 
+# allow transcript labels to come from non-Rust code
+# https://github.com/aptos-labs/aptos-core/issues/9340
 [patch.crates-io]
 merlin = { git = "https://github.com/aptos-labs/merlin" }
