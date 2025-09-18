@@ -7,9 +7,6 @@ members = ["bin/*", "crates/*"]
 async-trait = "0.1"
 anyhow = "1.0"
 
-aptos-config = { git = "https://github.com/fuzzland/aptos-core", rev = "1e5097063214a84f794ed2373f66a9d325bf6ca4" }
-aptos-db = { git = "https://github.com/fuzzland/aptos-core", rev = "1e5097063214a84f794ed2373f66a9d325bf6ca4" }
-aptos-executor = { git = "https://github.com/fuzzland/aptos-core", rev = "1e5097063214a84f794ed2373f66a9d325bf6ca4" }
 aptos-storage-interface = { git = "https://github.com/fuzzland/aptos-core", rev = "1e5097063214a84f794ed2373f66a9d325bf6ca4" }
 aptos-types = { git = "https://github.com/fuzzland/aptos-core", rev = "1e5097063214a84f794ed2373f66a9d325bf6ca4" }
 aptos-vm = { git = "https://github.com/fuzzland/aptos-core", rev = "1e5097063214a84f794ed2373f66a9d325bf6ca4" }
@@ -18,7 +15,7 @@ aptos-vm-environment = { git = "https://github.com/fuzzland/aptos-core", rev = "
 aptos-vm-logging = { git = "https://github.com/fuzzland/aptos-core", rev = "1e5097063214a84f794ed2373f66a9d325bf6ca4" }
 aptos-vm-types = { git = "https://github.com/fuzzland/aptos-core", rev = "1e5097063214a84f794ed2373f66a9d325bf6ca4" }
 
+[patch.crates-io]
 # allow transcript labels to come from non-Rust code
 # https://github.com/aptos-labs/aptos-core/issues/9340
-[patch.crates-io]
 merlin = { git = "https://github.com/aptos-labs/merlin" }
