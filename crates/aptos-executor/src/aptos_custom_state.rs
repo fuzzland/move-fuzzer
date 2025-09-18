@@ -17,7 +17,6 @@ use aptos_move_vm_runtime::{Module, ModuleStorage, RuntimeEnvironment, Script, W
 use aptos_move_vm_types::code::{Code, ScriptCache};
 use aptos_move_vm_types::delayed_values::delayed_field_id::DelayedFieldID;
 use aptos_move_vm_types::resolver::ResourceResolver;
-use aptos_types::PeerId;
 use aptos_types::error::{PanicError, PanicOr};
 use aptos_types::on_chain_config::ConfigStorage;
 use aptos_types::state_store::StateViewId;
@@ -36,9 +35,10 @@ use bytes::Bytes;
 #[derive(Clone)]
 pub struct AptosCustomState {
     kv_state: HashMap<StateKey, StateValue>,
-    code_state: HashMap<(), ()>,
-    config_state: HashMap<StateKey, Bytes>,
-
+    tables: HashMap<(TableHandle, Vec<u8>), Bytes>,
+    modules: HashMap<ModuleId, Bytes>,
+    scripts_deser: HashMap<[u8; 32], Arc<CompiledScript>>,
+    scripts_verified: HashMap<[u8; 32], Arc<Script>>,
     runtime_environment: RuntimeEnvironment,
 }
 
@@ -61,15 +61,7 @@ impl TAggregatorV1View for AptosCustomState {
     }
 }
 
-impl ConfigStorage for AptosCustomState {
-    fn fetch_config_bytes(&self, state_key: &StateKey) -> Option<Bytes> {
-        match self.config_state.get(state_key) {
-            Some(v) => Some(v.clone()),
-            None => None,
-        }
-    }
-}
-
+// Do we need to implement this?
 impl TDelayedFieldView for AptosCustomState {
     type Identifier = DelayedFieldID;
     type ResourceKey = StateKey;
@@ -77,50 +69,59 @@ impl TDelayedFieldView for AptosCustomState {
 
     fn get_delayed_field_value(
         &self,
-        id: &DelayedFieldID,
+        _id: &DelayedFieldID,
     ) -> Result<DelayedFieldValue, PanicOr<DelayedFieldsSpeculativeError>> {
-        todo!()
+        Err(PanicOr::CodeInvariantError("unreachable".to_string()))
     }
 
     fn delayed_field_try_add_delta_outcome(
         &self,
-        id: &DelayedFieldID,
-        base_delta: &SignedU128,
-        delta: &SignedU128,
-        max_value: u128,
+        _id: &DelayedFieldID,
+        _base_delta: &SignedU128,
+        _delta: &SignedU128,
+        _max_value: u128,
     ) -> Result<bool, PanicOr<DelayedFieldsSpeculativeError>> {
-        todo!()
+        Err(PanicOr::CodeInvariantError("unreachable".to_string()))
     }
 
-    fn generate_delayed_field_id(&self, width: u32) -> DelayedFieldID {
-        todo!()
+    fn generate_delayed_field_id(&self, _width: u32) -> DelayedFieldID {
+        DelayedFieldID::new_with_width(0x1337, 0x1338)
     }
 
-    fn validate_delayed_field_id(&self, id: &DelayedFieldID) -> Result<(), PanicError> {
-        todo!()
+    fn validate_delayed_field_id(&self, _id: &DelayedFieldID) -> Result<(), PanicError> {
+        Err(PanicError::CodeInvariantError("unreachable".to_string()))
     }
 
     fn get_reads_needing_exchange(
         &self,
-        delayed_write_set_ids: &HashSet<DelayedFieldID>,
-        skip: &HashSet<StateKey>,
+        _delayed_write_set_ids: &HashSet<DelayedFieldID>,
+        _skip: &HashSet<StateKey>,
     ) -> Result<BTreeMap<StateKey, (StateValueMetadata, u64, Arc<MoveTypeLayout>)>, PanicError> {
-        todo!()
+        Err(PanicError::CodeInvariantError("unreachable".to_string()))
     }
 
     fn get_group_reads_needing_exchange(
         &self,
-        delayed_write_set_ids: &HashSet<DelayedFieldID>,
-        skip: &HashSet<StateKey>,
+        _delayed_write_set_ids: &HashSet<DelayedFieldID>,
+        _skip: &HashSet<StateKey>,
     ) -> PartialVMResult<BTreeMap<StateKey, (StateValueMetadata, u64)>> {
-        todo!()
+        Err(unknown_status!())
+    }
+}
+
+impl ConfigStorage for AptosCustomState {
+    fn fetch_config_bytes(&self, state_key: &StateKey) -> Option<Bytes> {
+        match self.kv_state.get(state_key) {
+            Some(v) => Some(v.bytes().clone()),
+            None => None,
+        }
     }
 }
 
 impl ResourceResolver for AptosCustomState {
     fn get_resource_bytes_with_metadata_and_layout(
         &self,
-        address: &PeerId,
+        address: &AccountAddress,
         struct_tag: &StructTag,
         metadata: &[Metadata],
         layout: Option<&MoveTypeLayout>,
@@ -248,7 +249,7 @@ impl TResourceGroupView for AptosCustomState {
 impl AptosModuleStorage for AptosCustomState {
     fn unmetered_get_module_state_value_metadata(
         &self,
-        address: &PeerId,
+        address: &AccountAddress,
         module_name: &IdentStr,
     ) -> PartialVMResult<Option<StateValueMetadata>> {
         todo!()
@@ -386,19 +387,10 @@ impl std::fmt::Debug for AptosCustomState {
 
 impl AptosCustomState {
     pub fn new_default() -> Self {
-        Self {
-            kv_state: HashMap::new(),
-            config_state: HashMap::new(),
-            code_state: HashMap::new(),
-            runtime_environment: todo!("implement"),
-        }
+        todo!("implement")
     }
 
     pub fn id(&self) -> StateViewId {
         StateViewId::Miscellaneous
-    }
-
-    pub fn insert(&mut self, state_key: StateKey, state_value: StateValue) {
-        self.kv_state.insert(state_key, state_value);
     }
 }
