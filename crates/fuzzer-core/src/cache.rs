@@ -78,7 +78,7 @@ impl<A: ChainAdapter> ObjectCache<A> {
     }
 
     pub fn has_cached_versions(&self, id: &A::ObjectId) -> bool {
-        self.caches.get(id).map_or(false, |cache| !cache.is_empty())
+        self.caches.get(id).is_some_and(|cache| !cache.is_empty())
     }
 
     pub fn cached_version_count(&self, id: &A::ObjectId) -> usize {

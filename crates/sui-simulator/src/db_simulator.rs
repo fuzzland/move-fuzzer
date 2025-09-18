@@ -2,12 +2,14 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use prometheus::Registry;
+use sui_adapter_latest::adapter::new_move_vm;
+use sui_adapter_latest::execution_engine::checked::execute_transaction_to_effects;
+use sui_adapter_latest::execution_mode;
+use sui_adapter_latest::type_layout_resolver::TypeLayoutResolver;
 use sui_execution::executor::Executor;
-use sui_execution::latest::{
-    all_natives, execute_transaction_to_effects, execution_mode, new_move_vm, TypeLayoutResolver,
-};
 use sui_json_rpc::{get_balance_changes_from_effect, ObjectProvider};
 use sui_json_rpc_types::{SuiTransactionBlockEffects, SuiTransactionBlockEvents};
+use sui_move_natives_latest::all_natives;
 use sui_move_trace_format::format::MoveTraceBuilder;
 use sui_move_trace_format::interface::Tracer;
 use sui_move_vm_runtime::move_vm::MoveVM;
@@ -125,7 +127,7 @@ impl Executor for CustomExecutor {
         &'vm self,
         store: Box<dyn TypeLayoutStore + 'store>,
     ) -> Box<dyn LayoutResolver + 'r> {
-        Box::new(TypeLayoutResolver::new(&*self.move_vm, store))
+        Box::new(TypeLayoutResolver::new(&self.move_vm, store))
     }
 }
 
@@ -172,7 +174,7 @@ impl DBSimulator {
             &protocol_config,
         );
         let move_vm = Arc::new(
-            new_move_vm(natives, &protocol_config, None)
+            new_move_vm(natives, &protocol_config)
                 .map_err(|e| SimulatorError::ConfigError(format!("Failed to create MoveVM: {:?}", e)))?,
         );
 
@@ -255,6 +257,7 @@ impl DBSimulator {
     }
 
     /// Execute transaction
+    #[allow(clippy::too_many_arguments)]
     fn execute_transaction(
         &self,
         epoch_info: &EpochInfo,

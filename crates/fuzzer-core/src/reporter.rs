@@ -38,7 +38,7 @@ impl ConsoleReporter {
         }
 
         // Only print progress every 10,000 iterations to avoid spam
-        if current_iteration % 10_000 == 0 && current_iteration != self.last_progress_iteration {
+        if current_iteration.is_multiple_of(10_000) && current_iteration != self.last_progress_iteration {
             let percentage = (current_iteration as f64 / max_iterations as f64) * 100.0;
             print!(
                 "\rProgress: {}/{} iterations ({:.1}%)",
