@@ -2,24 +2,31 @@ use anyhow::Result;
 
 /// Transaction executor trait for different blockchains.
 ///
-/// Generic over blockchain-specific types:
-/// * `Tx` - Transaction data
-/// * `Id` - Object identifier
-/// * `Obj` - Object type
-/// * `R` - Execution result
-/// * `T` - Tracer type (must be Send)
-pub trait Executor<Tx, Id, Obj, R, T>: Send + Sync
-where
-    T: Send,
-{
+/// * `Transaction` - Transaction data
+/// * `ObjectID` - Object identifier
+/// * `Object` - Object type
+/// * `ExecutionResult` - Execution result
+/// * `Tracer` - Tracer type (must be Send)
+pub trait Executor {
+    type Transaction;
+    type ObjectID;
+    type Object;
+    type ExecutionResult;
+    type Tracer;
+
     /// Execute transaction.
-    fn execute(&self, tx: Tx, override_objects: Vec<(Id, Obj)>, tracer: Option<T>) -> Result<R>;
+    fn execute(
+        &self,
+        tx: Self::Transaction,
+        override_objects: Vec<(Self::ObjectID, Self::Object)>,
+        tracer: Option<Self::Tracer>,
+    ) -> Result<Self::ExecutionResult>;
 
     /// Get object by ID.
-    fn get_object(&self, object_id: &Id) -> Option<Obj>;
+    fn get_object(&self, object_id: &Self::ObjectID) -> Option<Self::Object>;
 
     /// Get multiple objects by their IDs.
-    fn multi_get_objects(&self, object_ids: &[Id]) -> Vec<Option<Obj>>;
+    fn multi_get_objects(&self, object_ids: &[Self::ObjectID]) -> Vec<Option<Self::Object>>;
 
     /// Get simulator implementation name.
     fn name(&self) -> &str;

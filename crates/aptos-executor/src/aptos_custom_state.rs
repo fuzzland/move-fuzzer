@@ -29,6 +29,7 @@ use aptos_vm::move_vm_ext::{AptosMoveResolver, AsExecutorView, AsResourceGroupVi
 use aptos_vm_types::module_and_script_storage::module_storage::AptosModuleStorage;
 use aptos_vm_types::resolver::{
     BlockSynchronizationKillSwitch, ExecutorView, ResourceGroupSize, ResourceGroupView, StateStorageView,
+    TResourceGroupView, TResourceView,
 };
 use bytes::Bytes;
 
@@ -166,12 +167,76 @@ impl TableResolver for AptosCustomState {
 
 impl AsExecutorView for AptosCustomState {
     fn as_executor_view(&self) -> &dyn ExecutorView {
+        self
+    }
+}
+
+impl TResourceView for AptosCustomState {
+    type Key = StateKey;
+    type Layout = MoveTypeLayout;
+
+    fn get_resource_state_value(
+        &self,
+        state_key: &Self::Key,
+        maybe_layout: Option<&Self::Layout>,
+    ) -> PartialVMResult<Option<StateValue>> {
+        todo!()
+    }
+
+    fn get_resource_state_value_metadata(&self, state_key: &Self::Key) -> PartialVMResult<Option<StateValueMetadata>> {
+        todo!()
+    }
+
+    fn get_resource_state_value_size(&self, state_key: &Self::Key) -> PartialVMResult<u64> {
+        todo!()
+    }
+
+    fn resource_exists(&self, state_key: &Self::Key) -> PartialVMResult<bool> {
         todo!()
     }
 }
 
 impl AsResourceGroupView for AptosCustomState {
     fn as_resource_group_view(&self) -> &dyn ResourceGroupView {
+        self
+    }
+}
+
+impl TResourceGroupView for AptosCustomState {
+    type GroupKey = StateKey;
+    type ResourceTag = StructTag;
+    type Layout = MoveTypeLayout;
+
+    fn resource_group_size(&self, group_key: &Self::GroupKey) -> PartialVMResult<ResourceGroupSize> {
+        todo!()
+    }
+
+    fn get_resource_from_group(
+        &self,
+        group_key: &Self::GroupKey,
+        resource_tag: &Self::ResourceTag,
+        maybe_layout: Option<&Self::Layout>,
+    ) -> PartialVMResult<Option<Bytes>> {
+        todo!()
+    }
+
+    fn resource_size_in_group(
+        &self,
+        group_key: &Self::GroupKey,
+        resource_tag: &Self::ResourceTag,
+    ) -> PartialVMResult<usize> {
+        todo!()
+    }
+
+    fn resource_exists_in_group(
+        &self,
+        group_key: &Self::GroupKey,
+        resource_tag: &Self::ResourceTag,
+    ) -> PartialVMResult<bool> {
+        todo!()
+    }
+
+    fn release_group_cache(&self) -> Option<HashMap<Self::GroupKey, BTreeMap<Self::ResourceTag, Bytes>>> {
         todo!()
     }
 }

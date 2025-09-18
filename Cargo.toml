@@ -2,13 +2,17 @@
 
 resolver = "2"
 members = [
-    "bin/*",
-    "crates/fuzzer-core",
-    "crates/sui-tracer",
-    "crates/sui-fuzzer",
-    "crates/sui-simulator",
-    "crates/aptos-executor",
+    # "bin/fuzzer",
+
+
     "crates/executor",
+    "crates/fuzzer-core",
+
+    # "crates/sui-tracer",
+    # "crates/sui-fuzzer",
+    # "crates/sui-simulator",
+
+    "crates/aptos-executor",
 ]
 
 [workspace.package]

@@ -1,4 +1,6 @@
 use anyhow::Result;
+use aptos_types::state_store::state_key::StateKey;
+use aptos_types::state_store::state_value::StateValue;
 use aptos_types::transaction::{RawTransaction, SignedTransaction};
 use aptos_vm::AptosVM;
 use aptos_vm_logging::log_schema::AdapterLogSchema;
@@ -7,23 +9,17 @@ use executor::Executor;
 use crate::aptos_custom_state::AptosCustomState;
 use crate::types::TransactionResult;
 
-type Tx = RawTransaction;
-type Id = Vec<u8>;
-type Obj = Option<Vec<u8>>;
-type R = TransactionResult;
-type T = ();
-
 pub struct AptosMoveExecutor {
     vm: AptosVM,
     state: AptosCustomState,
 }
 
 impl AptosMoveExecutor {
-    fn to_signed_transaction(transaction: Tx) -> SignedTransaction {
+    fn to_signed_transaction(transaction: RawTransaction) -> SignedTransaction {
         todo!()
     }
 
-    fn execute_transaction(&self, transaction: Tx) -> Result<R> {
+    pub fn execute_transaction(&self, transaction: RawTransaction) -> Result<TransactionResult> {
         let (vm_status, vm_output) = self.vm.execute_user_transaction(
             &self.state,
             &self.state,
@@ -45,38 +41,46 @@ impl AptosMoveExecutor {
         })
     }
 
-    fn execute_transaction_with_overlay(
+    pub fn execute_transaction_with_overlay(
         &self,
-        transaction: Tx,
-        override_objects: Vec<(Id, Obj)>,
+        transaction: RawTransaction,
+        override_objects: Vec<(StateKey, StateValue)>,
     ) -> Result<TransactionResult> {
         todo!()
     }
 
-    fn get_object(&self, object_id: &Id) -> Option<Obj> {
+    pub fn get_object(&self, object_id: &StateKey) -> Option<StateValue> {
         todo!()
     }
 
-    fn multi_get_objects(&self, object_ids: &[Id]) -> Vec<Option<Obj>> {
+    pub fn multi_get_objects(&self, object_ids: &[StateKey]) -> Vec<Option<StateValue>> {
         todo!()
     }
 }
 
-impl Executor<Tx, Id, Obj, R, T> for AptosMoveExecutor {
+impl Executor for AptosMoveExecutor {
+    type Transaction = RawTransaction;
+    type ObjectID = StateKey;
+    // TODO: decide if we should use another wrapper to return
+    // enum(StateValue, Script, Module) or just use StateVcaalue
+    type Object = StateValue;
+    type ExecutionResult = TransactionResult;
+    type Tracer = ();
+
     fn execute(
         &self,
-        tx: Tx,
-        override_objects: Vec<(Vec<u8>, Option<Vec<u8>>)>,
+        tx: RawTransaction,
+        override_objects: Vec<(StateKey, StateValue)>,
         _tracer: Option<()>,
     ) -> Result<TransactionResult> {
         self.execute_transaction_with_overlay(tx, override_objects)
     }
 
-    fn get_object(&self, object_id_bytes: &Id) -> Option<Obj> {
+    fn get_object(&self, object_id_bytes: &StateKey) -> Option<StateValue> {
         self.get_object(object_id_bytes)
     }
 
-    fn multi_get_objects(&self, object_ids: &[Id]) -> Vec<Option<Obj>> {
+    fn multi_get_objects(&self, object_ids: &[StateKey]) -> Vec<Option<StateValue>> {
         self.multi_get_objects(object_ids)
     }
 
