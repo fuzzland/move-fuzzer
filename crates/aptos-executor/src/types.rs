@@ -10,5 +10,4 @@ pub struct TransactionResult {
     pub write_set: WriteSet,
     pub events: Vec<ContractEvent>,
     pub fee_statement: Option<FeeStatement>,
-    pub cache_misses: u64,
 }

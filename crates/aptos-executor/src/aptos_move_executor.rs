@@ -2,8 +2,7 @@ use anyhow::Result;
 use aptos_types::transaction::{RawTransaction, SignedTransaction};
 use aptos_vm::AptosVM;
 use aptos_vm_logging::log_schema::AdapterLogSchema;
-use async_trait::async_trait;
-use simulator::Simulator;
+use executor::Executor;
 
 use crate::aptos_custom_state::AptosCustomState;
 use crate::types::TransactionResult;
@@ -63,9 +62,8 @@ impl AptosMoveExecutor {
     }
 }
 
-#[async_trait]
-impl Simulator<Tx, Id, Obj, R, T> for AptosMoveExecutor {
-    async fn simulate(
+impl Executor<Tx, Id, Obj, R, T> for AptosMoveExecutor {
+    fn execute(
         &self,
         tx: Tx,
         override_objects: Vec<(Vec<u8>, Option<Vec<u8>>)>,
@@ -74,11 +72,11 @@ impl Simulator<Tx, Id, Obj, R, T> for AptosMoveExecutor {
         self.execute_transaction_with_overlay(tx, override_objects)
     }
 
-    async fn get_object(&self, object_id_bytes: &Id) -> Option<Obj> {
+    fn get_object(&self, object_id_bytes: &Id) -> Option<Obj> {
         self.get_object(object_id_bytes)
     }
 
-    async fn multi_get_objects(&self, object_ids: &[Id]) -> Vec<Option<Obj>> {
+    fn multi_get_objects(&self, object_ids: &[Id]) -> Vec<Option<Obj>> {
         self.multi_get_objects(object_ids)
     }
 
