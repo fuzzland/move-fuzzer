@@ -7,6 +7,8 @@ members = [
     "crates/sui-tracer",
     "crates/sui-fuzzer",
     "crates/sui-simulator",
+    # "crates/aptos-executor",
+    "crates/simulator",
 ]
 
 [workspace.package]
@@ -14,6 +16,8 @@ edition = "2021"
 version = "0.1.0"
 
 [workspace.dependencies]
+simulator = { path = "crates/simulator" }
+
 async-trait = "0.1"
 anyhow = "1.0"
 clap = { version = "4.5", features = ["derive"] }
@@ -29,27 +33,75 @@ eyre = "0.6"
 thiserror = "2.0"
 hex = "0.4"
 
+### For remote development
+
 # Sui Specific dependencies
-sui-sdk = { git = "https://github.com/fuzzland/sui.git", branch = "mainnet-v1.55.0-dryrun-with-tracer" }
-sui-types = { git = "https://github.com/fuzzland/sui.git", branch = "mainnet-v1.55.0-dryrun-with-tracer" }
-sui-config = { git = "https://github.com/fuzzland/sui.git", branch = "mainnet-v1.55.0-dryrun-with-tracer" }
-sui-json-rpc = { git = "https://github.com/fuzzland/sui.git", branch = "mainnet-v1.55.0-dryrun-with-tracer" }
-sui-json-rpc-types = { git = "https://github.com/fuzzland/sui.git", branch = "mainnet-v1.55.0-dryrun-with-tracer" }
-sui-core = { git = "https://github.com/fuzzland/sui.git", branch = "mainnet-v1.55.0-dryrun-with-tracer" }
-sui-execution = { git = "https://github.com/fuzzland/sui.git", branch = "mainnet-v1.55.0-dryrun-with-tracer", features = [
+sui-sdk = { git = "https://github.com/fuzzland/sui.git", rev = "6b7b1c2" }
+sui-types = { git = "https://github.com/fuzzland/sui.git", rev = "6b7b1c2" }
+sui-config = { git = "https://github.com/fuzzland/sui.git", rev = "6b7b1c2" }
+sui-json-rpc = { git = "https://github.com/fuzzland/sui.git", rev = "6b7b1c2" }
+sui-json-rpc-types = { git = "https://github.com/fuzzland/sui.git", rev = "6b7b1c2" }
+sui-core = { git = "https://github.com/fuzzland/sui.git", rev = "6b7b1c2" }
+sui-execution = { git = "https://github.com/fuzzland/sui.git", rev = "6b7b1c2", features = [
     "tracing",
 ] }
-sui-storage = { git = "https://github.com/fuzzland/sui.git", branch = "mainnet-v1.55.0-dryrun-with-tracer" }
-sui-protocol-config = { git = "https://github.com/fuzzland/sui.git", branch = "mainnet-v1.55.0-dryrun-with-tracer" }
+sui-storage = { git = "https://github.com/fuzzland/sui.git", rev = "6b7b1c2" }
+sui-protocol-config = { git = "https://github.com/fuzzland/sui.git", rev = "6b7b1c2" }
+sui-adapter-latest = { git = "https://github.com/fuzzland/sui.git", rev = "6b7b1c2" }
+sui-move-natives-latest = { git = "https://github.com/fuzzland/sui.git", rev = "6b7b1c2" }
 # Rename to avoid conflict with aptos move crates
-sui-move-core-types = { package = "move-core-types", git = "https://github.com/fuzzland/sui.git", branch = "mainnet-v1.55.0-dryrun-with-tracer" }
-sui-move-vm-types = { package = "move-vm-types", git = "https://github.com/fuzzland/sui.git", branch = "mainnet-v1.55.0-dryrun-with-tracer" }
-sui-move-binary-format = { package = "move-binary-format", git = "https://github.com/fuzzland/sui.git", branch = "mainnet-v1.55.0-dryrun-with-tracer" }
-sui-move-trace-format = { package = "move-trace-format", git = "https://github.com/fuzzland/sui.git", branch = "mainnet-v1.55.0-dryrun-with-tracer" }
-sui-move-bytecode-utils = { package = "move-bytecode-utils", git = "https://github.com/fuzzland/sui.git", branch = "mainnet-v1.55.0-dryrun-with-tracer" }
-sui-move-vm-config = { package = "move-vm-config", git = "https://github.com/fuzzland/sui.git", branch = "mainnet-v1.55.0-dryrun-with-tracer" }
-sui-move-vm-runtime = { package = "move-vm-runtime", git = "https://github.com/fuzzland/sui.git", branch = "mainnet-v1.55.0-dryrun-with-tracer" }
+sui-move-core-types = { package = "move-core-types", git = "https://github.com/fuzzland/sui.git", rev = "6b7b1c2" }
+sui-move-vm-types = { package = "move-vm-types", git = "https://github.com/fuzzland/sui.git", rev = "6b7b1c2" }
+sui-move-binary-format = { package = "move-binary-format", git = "https://github.com/fuzzland/sui.git", rev = "6b7b1c2" }
+sui-move-trace-format = { package = "move-trace-format", git = "https://github.com/fuzzland/sui.git", rev = "6b7b1c2" }
+sui-move-bytecode-utils = { package = "move-bytecode-utils", git = "https://github.com/fuzzland/sui.git", rev = "6b7b1c2" }
+sui-move-vm-config = { package = "move-vm-config", git = "https://github.com/fuzzland/sui.git", rev = "6b7b1c2" }
+sui-move-vm-runtime = { package = "move-vm-runtime", git = "https://github.com/fuzzland/sui.git", rev = "6b7b1c2" }
+
+### For local development
+# # Sui Specific dependencies
+# sui-sdk = { path = "../sui/crates/sui-sdk" }
+# sui-types = { path = "../sui/crates/sui-types" }
+# sui-config = { path = "../sui/crates/sui-config" }
+# sui-json-rpc = { path = "../sui/crates/sui-json-rpc" }
+# sui-json-rpc-types = { path = "../sui/crates/sui-json-rpc-types" }
+# sui-core = { path = "../sui/crates/sui-core" }
+# sui-execution = { path = "../sui/sui-execution", features = ["tracing"] }
+# sui-storage = { path = "../sui/crates/sui-storage" }
+# sui-protocol-config = { path = "../sui/crates/sui-protocol-config" }
+# sui-adapter-latest = { path = "../sui/sui-execution/latest/sui-adapter" }
+# sui-move-natives-latest = { path = "../sui/sui-execution/latest/sui-move-natives" }
+# # Rename to avoid conflict with aptos move crates
+# sui-move-core-types = { package = "move-core-types", path = "../sui/external-crates/move/crates/move-core-types" }
+# sui-move-vm-types = { package = "move-vm-types", path = "../sui/external-crates/move/crates/move-vm-types" }
+# sui-move-binary-format = { package = "move-binary-format", path = "../sui/external-crates/move/crates/move-binary-format" }
+# sui-move-trace-format = { package = "move-trace-format", path = "../sui/external-crates/move/crates/move-trace-format" }
+# sui-move-bytecode-utils = { package = "move-bytecode-utils", path = "../sui/external-crates/move/crates/move-bytecode-utils" }
+# sui-move-vm-config = { package = "move-vm-config", path = "../sui/external-crates/move/crates/move-vm-config" }
+# sui-move-vm-runtime = { package = "move-vm-runtime", path = "../sui/external-crates/move/crates/move-vm-runtime" }
+
 schemars = "1.0"
 
 # Aptos Specific dependencies
 aptos-config = { git = "https://github.com/fuzzland/aptos-core", rev = "1e5097063214a84f794ed2373f66a9d325bf6ca4" }
+aptos-db = { git = "https://github.com/fuzzland/aptos-core", rev = "1e5097063214a84f794ed2373f66a9d325bf6ca4" }
+aptos-executor = { git = "https://github.com/fuzzland/aptos-core", rev = "1e5097063214a84f794ed2373f66a9d325bf6ca4" }
+aptos-storage-interface = { git = "https://github.com/fuzzland/aptos-core", rev = "1e5097063214a84f794ed2373f66a9d325bf6ca4" }
+aptos-types = { git = "https://github.com/fuzzland/aptos-core", rev = "1e5097063214a84f794ed2373f66a9d325bf6ca4" }
+aptos-vm = { git = "https://github.com/fuzzland/aptos-core", rev = "1e5097063214a84f794ed2373f66a9d325bf6ca4" }
+aptos-vm-genesis = { git = "https://github.com/fuzzland/aptos-core", rev = "1e5097063214a84f794ed2373f66a9d325bf6ca4" }
+aptos-vm-environment = { git = "https://github.com/fuzzland/aptos-core", rev = "1e5097063214a84f794ed2373f66a9d325bf6ca4" }
+aptos-vm-logging = { git = "https://github.com/fuzzland/aptos-core", rev = "1e5097063214a84f794ed2373f66a9d325bf6ca4" }
+aptos-vm-types = { git = "https://github.com/fuzzland/aptos-core", rev = "1e5097063214a84f794ed2373f66a9d325bf6ca4" }
+aptos-aggregator = { git = "https://github.com/fuzzland/aptos-core", rev = "1e5097063214a84f794ed2373f66a9d325bf6ca4" }
+aptos-move-table-extension = { package = "move-table-extension", git = "https://github.com/fuzzland/aptos-core", rev = "1e5097063214a84f794ed2373f66a9d325bf6ca4" }
+aptos-move-core-types = { package = "move-core-types", git = "https://github.com/fuzzland/aptos-core", rev = "1e5097063214a84f794ed2373f66a9d325bf6ca4" }
+aptos-move-binary-format = { package = "move-binary-format", git = "https://github.com/fuzzland/aptos-core", rev = "1e5097063214a84f794ed2373f66a9d325bf6ca4" }
+bytes = "=1.10.1"
+aptos-move-vm-types = { package = "move-vm-types", git = "https://github.com/fuzzland/aptos-core", rev = "1e5097063214a84f794ed2373f66a9d325bf6ca4" }
+aptos-move-vm-runtime = { package = "move-vm-runtime", git = "https://github.com/fuzzland/aptos-core", rev = "1e5097063214a84f794ed2373f66a9d325bf6ca4" }
+
+# allow transcript labels to come from non-Rust code
+# https://github.com/aptos-labs/aptos-core/issues/9340
+[patch.crates-io]
+merlin = { git = "https://github.com/aptos-labs/merlin" }
