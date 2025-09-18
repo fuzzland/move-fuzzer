@@ -174,8 +174,8 @@ pub struct ExecutionResult {
 
 impl CloneableValue {
     pub fn parse_u256(s: &str) -> FuzzerResult<CloneableValue> {
-        let value = if s.starts_with("0x") {
-            U256::from_str_radix(&s[2..], 16)
+        let value = if let Some(hex) = s.strip_prefix("0x") {
+            U256::from_str_radix(hex, 16)
                 .map_err(|e| FuzzerError::ConversionError(format!("Invalid U256 hex: {}", e)))?
         } else {
             U256::from_str(s).map_err(|e| FuzzerError::ConversionError(format!("Invalid U256 decimal: {}", e)))?
@@ -279,7 +279,7 @@ impl CloneableValue {
     /// Get the actual Object from StructObject (owned), prioritizing cached
     /// over initial
     pub fn get_struct_object_owned(&self) -> FuzzerResult<Object> {
-        self.get_struct_object().map(|obj| obj.clone())
+        self.get_struct_object().cloned()
     }
 
     /// Check if this StructObject has a cached version

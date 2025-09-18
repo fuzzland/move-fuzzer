@@ -148,7 +148,6 @@ impl SuiAdapter {
 
                 ptb.obj(obj_arg).with_context(|| "Failed to add object argument")
             }
-
         }
     }
 
@@ -221,7 +220,7 @@ impl ChainAdapter for SuiAdapter {
         // Parse type arguments to TypeInput for parameter resolution
         let type_inputs: Vec<TypeInput> = Self::parse_type_arguments(&function.type_arguments)?
             .into_iter()
-            .map(|tag| TypeInput::from(tag))
+            .map(TypeInput::from)
             .collect();
 
         let mut parameters = Vec::new();

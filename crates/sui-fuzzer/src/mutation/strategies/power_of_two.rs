@@ -121,8 +121,8 @@ impl PowerOfTwoStrategy {
                                     bytes[i] -= 1;
                                     carry = false;
                                     // Fill remaining bytes with 0xFF
-                                    for j in (i + 1)..32 {
-                                        bytes[j] = 0xFF;
+                                    for byte in bytes.iter_mut().skip(i + 1) {
+                                        *byte = 0xFF;
                                     }
                                 }
                             }

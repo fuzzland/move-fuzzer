@@ -164,6 +164,12 @@ impl ShiftViolationTracer {
     }
 }
 
+impl Default for ShiftViolationTracer {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Tracer for ShiftViolationTracer {
     fn notify(&mut self, event: &TraceEvent, _writer: Writer<'_>) {
         match event {
@@ -224,7 +230,9 @@ impl Tracer for ShiftViolationTracer {
                                     }
                                 }
                             }
-                            _ => {}
+                            _ => {
+                                // todo
+                            }
                         }
                     }
                 }

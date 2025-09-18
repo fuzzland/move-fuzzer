@@ -9,7 +9,6 @@ fuzzer-core = { path = "../fuzzer-core" }
 # Sui-specific dependencies
 sui-sdk = { workspace = true }
 sui-types = { workspace = true }
-sui-config = { workspace = true }
 sui-json-rpc-types = { workspace = true }
 sui-move-core-types = { workspace = true }
 sui-move-vm-types = { workspace = true }
