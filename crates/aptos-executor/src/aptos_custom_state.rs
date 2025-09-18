@@ -1,28 +1,44 @@
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::sync::Arc;
 
+use aptos_aggregator::bounded_math::SignedU128;
 use aptos_aggregator::resolver::{TAggregatorV1View, TDelayedFieldView};
+use aptos_aggregator::types::{DelayedFieldValue, DelayedFieldsSpeculativeError};
 use aptos_move_binary_format::CompiledModule;
-use aptos_move_binary_format::errors::{PartialVMError, VMResult};
+use aptos_move_binary_format::errors::{PartialVMError, PartialVMResult, VMResult};
 use aptos_move_binary_format::file_format::CompiledScript;
 use aptos_move_core_types::account_address::AccountAddress;
 use aptos_move_core_types::identifier::IdentStr;
 use aptos_move_core_types::language_storage::{ModuleId, StructTag};
 use aptos_move_core_types::metadata::Metadata;
 use aptos_move_core_types::value::MoveTypeLayout;
-use aptos_move_table_extension::TableResolver;
+use aptos_move_table_extension::{TableHandle, TableResolver};
 use aptos_move_vm_runtime::{Module, ModuleStorage, RuntimeEnvironment, Script, WithRuntimeEnvironment};
 use aptos_move_vm_types::code::{Code, ScriptCache};
 use aptos_move_vm_types::delayed_values::delayed_field_id::DelayedFieldID;
 use aptos_move_vm_types::resolver::ResourceResolver;
+use aptos_types::PeerId;
+use aptos_types::error::{PanicError, PanicOr};
 use aptos_types::on_chain_config::ConfigStorage;
 use aptos_types::state_store::StateViewId;
+use aptos_types::state_store::errors::StateViewError;
 use aptos_types::state_store::state_key::StateKey;
+use aptos_types::state_store::state_storage_usage::StateStorageUsage;
+use aptos_types::state_store::state_value::{StateValue, StateValueMetadata};
 use aptos_vm::move_vm_ext::{AptosMoveResolver, AsExecutorView, AsResourceGroupView, ResourceGroupResolver};
 use aptos_vm_types::module_and_script_storage::module_storage::AptosModuleStorage;
-use aptos_vm_types::resolver::{BlockSynchronizationKillSwitch, StateStorageView};
+use aptos_vm_types::resolver::{
+    BlockSynchronizationKillSwitch, ExecutorView, ResourceGroupSize, ResourceGroupView, StateStorageView,
+};
 use bytes::Bytes;
 
-pub struct AptosCustomState {}
+#[derive(Clone)]
+pub struct AptosCustomState {
+    state: HashMap<StateKey, StateValue>,
+    code_state: HashMap<(), ()>,
+
+    runtime_environment: RuntimeEnvironment,
+}
 
 impl AptosMoveResolver for AptosCustomState {}
 
@@ -31,11 +47,7 @@ impl AptosMoveResolver for AptosCustomState {}
 impl TAggregatorV1View for AptosCustomState {
     type Identifier = StateKey;
 
-    fn get_aggregator_v1_state_value(
-        &self,
-        id: &Self::Identifier,
-    ) -> aptos_move_binary_format::errors::PartialVMResult<Option<aptos_types::state_store::state_value::StateValue>>
-    {
+    fn get_aggregator_v1_state_value(&self, id: &StateKey) -> PartialVMResult<Option<StateValue>> {
         todo!()
     }
 }
@@ -55,57 +67,42 @@ impl TDelayedFieldView for AptosCustomState {
 
     fn get_delayed_field_value(
         &self,
-        id: &Self::Identifier,
-    ) -> Result<
-        aptos_aggregator::types::DelayedFieldValue,
-        aptos_types::error::PanicOr<aptos_aggregator::types::DelayedFieldsSpeculativeError>,
-    > {
+        id: &DelayedFieldID,
+    ) -> Result<DelayedFieldValue, PanicOr<DelayedFieldsSpeculativeError>> {
         todo!()
     }
 
     fn delayed_field_try_add_delta_outcome(
         &self,
-        id: &Self::Identifier,
-        base_delta: &aptos_aggregator::bounded_math::SignedU128,
-        delta: &aptos_aggregator::bounded_math::SignedU128,
+        id: &DelayedFieldID,
+        base_delta: &SignedU128,
+        delta: &SignedU128,
         max_value: u128,
-    ) -> Result<bool, aptos_types::error::PanicOr<aptos_aggregator::types::DelayedFieldsSpeculativeError>> {
+    ) -> Result<bool, PanicOr<DelayedFieldsSpeculativeError>> {
         todo!()
     }
 
-    fn generate_delayed_field_id(&self, width: u32) -> Self::Identifier {
+    fn generate_delayed_field_id(&self, width: u32) -> DelayedFieldID {
         todo!()
     }
 
-    fn validate_delayed_field_id(&self, id: &Self::Identifier) -> Result<(), aptos_types::error::PanicError> {
+    fn validate_delayed_field_id(&self, id: &DelayedFieldID) -> Result<(), PanicError> {
         todo!()
     }
 
     fn get_reads_needing_exchange(
         &self,
-        delayed_write_set_ids: &std::collections::HashSet<Self::Identifier>,
-        skip: &std::collections::HashSet<Self::ResourceKey>,
-    ) -> Result<
-        std::collections::BTreeMap<
-            Self::ResourceKey,
-            (
-                aptos_types::state_store::state_value::StateValueMetadata,
-                u64,
-                std::sync::Arc<MoveTypeLayout>,
-            ),
-        >,
-        aptos_types::error::PanicError,
-    > {
+        delayed_write_set_ids: &HashSet<DelayedFieldID>,
+        skip: &HashSet<StateKey>,
+    ) -> Result<BTreeMap<StateKey, (StateValueMetadata, u64, Arc<MoveTypeLayout>)>, PanicError> {
         todo!()
     }
 
     fn get_group_reads_needing_exchange(
         &self,
-        delayed_write_set_ids: &std::collections::HashSet<Self::Identifier>,
-        skip: &std::collections::HashSet<Self::ResourceKey>,
-    ) -> aptos_move_binary_format::errors::PartialVMResult<
-        std::collections::BTreeMap<Self::ResourceKey, (aptos_types::state_store::state_value::StateValueMetadata, u64)>,
-    > {
+        delayed_write_set_ids: &HashSet<DelayedFieldID>,
+        skip: &HashSet<StateKey>,
+    ) -> PartialVMResult<BTreeMap<StateKey, (StateValueMetadata, u64)>> {
         todo!()
     }
 }
@@ -113,47 +110,29 @@ impl TDelayedFieldView for AptosCustomState {
 impl ResourceResolver for AptosCustomState {
     fn get_resource_bytes_with_metadata_and_layout(
         &self,
-        address: &aptos_types::PeerId,
-        struct_tag: &aptos_move_core_types::language_storage::StructTag,
-        metadata: &[aptos_move_core_types::metadata::Metadata],
+        address: &PeerId,
+        struct_tag: &StructTag,
+        metadata: &[Metadata],
         layout: Option<&MoveTypeLayout>,
-    ) -> aptos_move_binary_format::errors::PartialVMResult<(Option<Bytes>, usize)> {
+    ) -> PartialVMResult<(Option<Bytes>, usize)> {
         todo!()
     }
 }
 
 impl ResourceGroupResolver for AptosCustomState {
-    fn release_resource_group_cache(
-        &self,
-    ) -> Option<
-        std::collections::HashMap<
-            aptos_types::state_store::state_key::StateKey,
-            std::collections::BTreeMap<aptos_move_core_types::language_storage::StructTag, Bytes>,
-        >,
-    > {
+    fn release_resource_group_cache(&self) -> Option<HashMap<StateKey, BTreeMap<StructTag, Bytes>>> {
         todo!()
     }
 
-    fn resource_group_size(
-        &self,
-        group_key: &aptos_types::state_store::state_key::StateKey,
-    ) -> aptos_move_binary_format::errors::PartialVMResult<aptos_vm_types::resolver::ResourceGroupSize> {
+    fn resource_group_size(&self, group_key: &StateKey) -> PartialVMResult<ResourceGroupSize> {
         todo!()
     }
 
-    fn resource_size_in_group(
-        &self,
-        group_key: &aptos_types::state_store::state_key::StateKey,
-        resource_tag: &aptos_move_core_types::language_storage::StructTag,
-    ) -> aptos_move_binary_format::errors::PartialVMResult<usize> {
+    fn resource_size_in_group(&self, group_key: &StateKey, resource_tag: &StructTag) -> PartialVMResult<usize> {
         todo!()
     }
 
-    fn resource_exists_in_group(
-        &self,
-        group_key: &aptos_types::state_store::state_key::StateKey,
-        resource_tag: &aptos_move_core_types::language_storage::StructTag,
-    ) -> aptos_move_binary_format::errors::PartialVMResult<bool> {
+    fn resource_exists_in_group(&self, group_key: &StateKey, resource_tag: &StructTag) -> PartialVMResult<bool> {
         todo!()
     }
 }
@@ -162,27 +141,22 @@ impl StateStorageView for AptosCustomState {
     type Key = StateKey;
 
     fn id(&self) -> StateViewId {
+        self.id()
+    }
+
+    fn read_state_value(&self, state_key: &StateKey) -> Result<(), StateViewError> {
         todo!()
     }
 
-    fn read_state_value(&self, state_key: &Self::Key) -> Result<(), aptos_types::state_store::errors::StateViewError> {
-        todo!()
-    }
-
-    fn get_usage(
-        &self,
-    ) -> Result<
-        aptos_types::state_store::state_storage_usage::StateStorageUsage,
-        aptos_types::state_store::errors::StateViewError,
-    > {
-        todo!()
+    fn get_usage(&self) -> Result<StateStorageUsage, StateViewError> {
+        Ok(StateStorageUsage::Untracked)
     }
 }
 
 impl TableResolver for AptosCustomState {
     fn resolve_table_entry_bytes_with_layout(
         &self,
-        handle: &aptos_move_table_extension::TableHandle,
+        handle: &TableHandle,
         key: &[u8],
         maybe_layout: Option<&MoveTypeLayout>,
     ) -> Result<Option<Bytes>, PartialVMError> {
@@ -191,35 +165,23 @@ impl TableResolver for AptosCustomState {
 }
 
 impl AsExecutorView for AptosCustomState {
-    fn as_executor_view(&self) -> &dyn aptos_vm_types::resolver::ExecutorView {
+    fn as_executor_view(&self) -> &dyn ExecutorView {
         todo!()
     }
 }
 
 impl AsResourceGroupView for AptosCustomState {
-    fn as_resource_group_view(&self) -> &dyn aptos_vm_types::resolver::ResourceGroupView {
+    fn as_resource_group_view(&self) -> &dyn ResourceGroupView {
         todo!()
-    }
-}
-
-impl AptosCustomState {
-    pub fn new() -> Self {
-        Self {}
-    }
-
-    pub fn id(&self) -> StateViewId {
-        StateViewId::Miscellaneous
     }
 }
 
 impl AptosModuleStorage for AptosCustomState {
     fn unmetered_get_module_state_value_metadata(
         &self,
-        address: &aptos_types::PeerId,
-        module_name: &aptos_move_core_types::identifier::IdentStr,
-    ) -> aptos_move_binary_format::errors::PartialVMResult<
-        Option<aptos_types::state_store::state_value::StateValueMetadata>,
-    > {
+        address: &PeerId,
+        module_name: &IdentStr,
+    ) -> PartialVMResult<Option<StateValueMetadata>> {
         todo!()
     }
 }
@@ -303,50 +265,73 @@ impl ModuleStorage for AptosCustomState {
     }
 }
 
+// TODO: find out the role of script in Aptos
+// in sui scripts are deprecated
+// decide do we need it and how will it be used (for fuzzing)
 impl ScriptCache for AptosCustomState {
     type Key = [u8; 32];
-
     type Deserialized = CompiledScript;
-
     type Verified = Script;
 
-    #[doc = " If the entry associated with the key is vacant, inserts the script and returns its copy."]
-    #[doc = " Otherwise, there is no insertion and the copy of existing entry is returned."]
-    fn insert_deserialized_script(
-        &self,
-        key: Self::Key,
-        deserialized_script: Self::Deserialized,
-    ) -> Arc<Self::Deserialized> {
+    fn insert_deserialized_script(&self, _key: [u8; 32], _deserialized_script: CompiledScript) -> Arc<CompiledScript> {
         todo!()
     }
 
-    #[doc = " If the entry associated with the key is vacant, inserts the script and returns its copy."]
-    #[doc = " If the entry associated with the key is occupied, but the entry is not verified, inserts"]
-    #[doc = " the script returning the copy. Otherwise, there is no insertion and the copy of existing"]
-    #[doc = " (verified) entry is returned."]
-    fn insert_verified_script(&self, key: Self::Key, verified_script: Self::Verified) -> Arc<Self::Verified> {
+    fn insert_verified_script(&self, _key: [u8; 32], _verified_script: Script) -> Arc<Script> {
         todo!()
     }
 
-    #[doc = " Returns the script if it has been cached before, or [None] otherwise."]
-    fn get_script(&self, key: &Self::Key) -> Option<Code<Self::Deserialized, Self::Verified>> {
-        todo!()
+    fn get_script(&self, _key: &[u8; 32]) -> Option<Code<CompiledScript, Script>> {
+        None
     }
 
-    #[doc = " Returns the number of scripts stored in cache."]
     fn num_scripts(&self) -> usize {
-        todo!()
+        0
     }
 }
 
 impl BlockSynchronizationKillSwitch for AptosCustomState {
+    // cannot be interrupted
     fn interrupt_requested(&self) -> bool {
-        todo!()
+        false
     }
 }
 
 impl WithRuntimeEnvironment for AptosCustomState {
     fn runtime_environment(&self) -> &RuntimeEnvironment {
-        todo!()
+        &self.runtime_environment
+    }
+}
+
+impl Default for AptosCustomState {
+    fn default() -> Self {
+        Self::new_default()
+    }
+}
+
+impl std::fmt::Debug for AptosCustomState {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("AptosCustomState")
+            .field("state", &self.state)
+            .field("code_state", &self.code_state)
+            .finish()
+    }
+}
+
+impl AptosCustomState {
+    pub fn new_default() -> Self {
+        Self {
+            state: HashMap::new(),
+            code_state: HashMap::new(),
+            runtime_environment: todo!("implement"),
+        }
+    }
+
+    pub fn id(&self) -> StateViewId {
+        StateViewId::Miscellaneous
+    }
+
+    pub fn insert(&mut self, state_key: StateKey, state_value: StateValue) {
+        self.state.insert(state_key, state_value);
     }
 }
