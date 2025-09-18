@@ -20,7 +20,6 @@ aptos-vm-types = { workspace = true }
 # Basic utilities
 anyhow = "1.0"
 serde = { version = "1.0", features = ["derive"] }
-serde_yaml = "0.9"
 bcs = "0.1"
 async-trait = "0.1"
 simulator = { path = "../simulator" }

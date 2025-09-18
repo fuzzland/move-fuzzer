@@ -28,3 +28,4 @@ target
 # test directories
 **/test-ledger*
 **/example-data*
+bin/*testbench*

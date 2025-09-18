@@ -1,11 +1,9 @@
 use anyhow::Result;
 use async_trait::async_trait;
 
-pub mod aptos_private_node_config;
+pub mod overlay_state_view;
 pub mod state_manager;
 pub mod transaction_result;
-
-pub use aptos_private_node_config::AptosPrivateNodeConfig;
 use aptos_types::state_store::state_key::StateKey;
 use aptos_types::state_store::TStateView;
 use aptos_types::transaction::SignedTransaction;
@@ -29,7 +27,7 @@ impl AptosMoveExecutor {
     /// Execute a single transaction against the cached overlay-backed
     /// StateView.
     pub async fn execute_transaction_with_overlay(&self, transaction: SignedTransaction) -> Result<TransactionResult> {
-        self.state_manager.ensure_genesis()?;
+        // Genesis is already applied during StateManager::new()
 
         // Borrow cached components
         let (status, gas_used, write_set, events, fee_statement, cache_misses) = {
@@ -121,6 +119,6 @@ impl Simulator<Vec<u8>, Vec<u8>, Option<Vec<u8>>, TransactionResult, ()> for Apt
     }
 
     fn name(&self) -> &str {
-        "AptosMoveExecutorSimulator"
+        "AptosMoveExecutor"
     }
 }
