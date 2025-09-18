@@ -4,4 +4,29 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+# Core Aptos dependencies for state management and execution
 aptos-config = { workspace = true }
+aptos-db = { workspace = true }
+aptos-executor = { workspace = true }
+aptos-storage-interface = { workspace = true }
+aptos-types = { workspace = true }
+aptos-vm = { workspace = true }
+aptos-vm-genesis = { workspace = true }
+aptos-vm-environment = { workspace = true }
+aptos-vm-logging = { workspace = true }
+aptos-vm-types = { workspace = true }
+aptos-aggregator = { workspace = true }
+aptos-move-table-extension = { workspace = true }
+aptos-move-core-types = { workspace = true }
+aptos-move-binary-format = { workspace = true }
+bytes = { workspace = true }
+aptos-move-vm-types = { workspace = true }
+aptos-move-vm-runtime = { workspace = true }
+
+# Basic utilities
+anyhow = "1.0"
+serde = { version = "1.0", features = ["derive"] }
+serde_yaml = "0.9"
+bcs = "0.1"
+async-trait = "0.1"
+simulator = { workspace = true }
