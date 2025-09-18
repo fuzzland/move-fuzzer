@@ -35,32 +35,41 @@ use bytes::Bytes;
 
 #[derive(Clone)]
 pub struct AptosCustomState {
-    state: HashMap<StateKey, StateValue>,
+    kv_state: HashMap<StateKey, StateValue>,
     code_state: HashMap<(), ()>,
+    config_state: HashMap<StateKey, Bytes>,
 
     runtime_environment: RuntimeEnvironment,
 }
 
+macro_rules! unknown_status {
+    () => {
+        PartialVMError::new(aptos_types::vm_status::StatusCode::UNKNOWN_STATUS)
+    };
+}
+
 impl AptosMoveResolver for AptosCustomState {}
 
-// derived
-// impl AggregatorV1Resolver for AptosCustomState {}
 impl TAggregatorV1View for AptosCustomState {
     type Identifier = StateKey;
 
     fn get_aggregator_v1_state_value(&self, id: &StateKey) -> PartialVMResult<Option<StateValue>> {
-        todo!()
+        match self.kv_state.get(id) {
+            Some(v) => Ok(Some(v.clone())),
+            None => Err(unknown_status!()),
+        }
     }
 }
 
 impl ConfigStorage for AptosCustomState {
     fn fetch_config_bytes(&self, state_key: &StateKey) -> Option<Bytes> {
-        todo!()
+        match self.config_state.get(state_key) {
+            Some(v) => Some(v.clone()),
+            None => None,
+        }
     }
 }
 
-// derived
-// impl DelayedFieldResolver for AptosCustomState {}
 impl TDelayedFieldView for AptosCustomState {
     type Identifier = DelayedFieldID;
     type ResourceKey = StateKey;
@@ -146,7 +155,10 @@ impl StateStorageView for AptosCustomState {
     }
 
     fn read_state_value(&self, state_key: &StateKey) -> Result<(), StateViewError> {
-        todo!()
+        match self.kv_state.get(state_key) {
+            Some(_) => Ok(()),
+            None => Err(StateViewError::NotFound(format!("Key not found: {:?}", state_key))),
+        }
     }
 
     fn get_usage(&self) -> Result<StateStorageUsage, StateViewError> {
@@ -177,21 +189,21 @@ impl TResourceView for AptosCustomState {
 
     fn get_resource_state_value(
         &self,
-        state_key: &Self::Key,
-        maybe_layout: Option<&Self::Layout>,
+        state_key: &StateKey,
+        maybe_layout: Option<&MoveTypeLayout>,
     ) -> PartialVMResult<Option<StateValue>> {
         todo!()
     }
 
-    fn get_resource_state_value_metadata(&self, state_key: &Self::Key) -> PartialVMResult<Option<StateValueMetadata>> {
+    fn get_resource_state_value_metadata(&self, state_key: &StateKey) -> PartialVMResult<Option<StateValueMetadata>> {
         todo!()
     }
 
-    fn get_resource_state_value_size(&self, state_key: &Self::Key) -> PartialVMResult<u64> {
+    fn get_resource_state_value_size(&self, state_key: &StateKey) -> PartialVMResult<u64> {
         todo!()
     }
 
-    fn resource_exists(&self, state_key: &Self::Key) -> PartialVMResult<bool> {
+    fn resource_exists(&self, state_key: &StateKey) -> PartialVMResult<bool> {
         todo!()
     }
 }
@@ -207,36 +219,28 @@ impl TResourceGroupView for AptosCustomState {
     type ResourceTag = StructTag;
     type Layout = MoveTypeLayout;
 
-    fn resource_group_size(&self, group_key: &Self::GroupKey) -> PartialVMResult<ResourceGroupSize> {
+    fn resource_group_size(&self, group_key: &StateKey) -> PartialVMResult<ResourceGroupSize> {
         todo!()
     }
 
     fn get_resource_from_group(
         &self,
-        group_key: &Self::GroupKey,
-        resource_tag: &Self::ResourceTag,
-        maybe_layout: Option<&Self::Layout>,
+        group_key: &StateKey,
+        resource_tag: &StructTag,
+        maybe_layout: Option<&MoveTypeLayout>,
     ) -> PartialVMResult<Option<Bytes>> {
         todo!()
     }
 
-    fn resource_size_in_group(
-        &self,
-        group_key: &Self::GroupKey,
-        resource_tag: &Self::ResourceTag,
-    ) -> PartialVMResult<usize> {
+    fn resource_size_in_group(&self, group_key: &StateKey, resource_tag: &StructTag) -> PartialVMResult<usize> {
         todo!()
     }
 
-    fn resource_exists_in_group(
-        &self,
-        group_key: &Self::GroupKey,
-        resource_tag: &Self::ResourceTag,
-    ) -> PartialVMResult<bool> {
+    fn resource_exists_in_group(&self, group_key: &StateKey, resource_tag: &StructTag) -> PartialVMResult<bool> {
         todo!()
     }
 
-    fn release_group_cache(&self) -> Option<HashMap<Self::GroupKey, BTreeMap<Self::ResourceTag, Bytes>>> {
+    fn release_group_cache(&self) -> Option<HashMap<StateKey, BTreeMap<StructTag, Bytes>>> {
         todo!()
     }
 }
@@ -376,17 +380,15 @@ impl Default for AptosCustomState {
 
 impl std::fmt::Debug for AptosCustomState {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("AptosCustomState")
-            .field("state", &self.state)
-            .field("code_state", &self.code_state)
-            .finish()
+        todo!("implement")
     }
 }
 
 impl AptosCustomState {
     pub fn new_default() -> Self {
         Self {
-            state: HashMap::new(),
+            kv_state: HashMap::new(),
+            config_state: HashMap::new(),
             code_state: HashMap::new(),
             runtime_environment: todo!("implement"),
         }
@@ -397,6 +399,6 @@ impl AptosCustomState {
     }
 
     pub fn insert(&mut self, state_key: StateKey, state_value: StateValue) {
-        self.state.insert(state_key, state_value);
+        self.kv_state.insert(state_key, state_value);
     }
 }
