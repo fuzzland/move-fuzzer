@@ -1,7 +1,8 @@
 use anyhow::Result;
 use aptos_types::state_store::state_key::StateKey;
 use aptos_types::state_store::state_value::StateValue;
-use aptos_types::transaction::{RawTransaction, SignedTransaction};
+use aptos_types::transaction::{RawTransaction, SignedTransaction, TransactionPayload};
+use aptos_types::write_set::WriteSet;
 use aptos_vm::AptosVM;
 use aptos_vm_logging::log_schema::AdapterLogSchema;
 use executor::Executor;
@@ -15,11 +16,11 @@ pub struct AptosMoveExecutor {
 }
 
 impl AptosMoveExecutor {
-    fn to_signed_transaction(transaction: RawTransaction) -> SignedTransaction {
+    fn to_signed_transaction(input: TransactionPayload) -> SignedTransaction {
         todo!()
     }
 
-    pub fn execute_transaction(&self, transaction: RawTransaction) -> Result<TransactionResult> {
+    pub fn execute_transaction(&self, transaction: TransactionPayload) -> Result<TransactionResult> {
         let (vm_status, vm_output) = self.vm.execute_user_transaction(
             &self.state,
             &self.state,
@@ -43,7 +44,7 @@ impl AptosMoveExecutor {
 
     pub fn execute_transaction_with_overlay(
         &self,
-        transaction: RawTransaction,
+        transaction: TransactionPayload,
         override_objects: Vec<(StateKey, StateValue)>,
     ) -> Result<TransactionResult> {
         todo!()
@@ -56,10 +57,17 @@ impl AptosMoveExecutor {
     pub fn multi_get_objects(&self, object_ids: &[StateKey]) -> Vec<Option<StateValue>> {
         todo!()
     }
+
+    pub fn commit(&self, write_set: WriteSet) -> Result<()> {
+        todo!()
+    }
 }
 
 impl Executor for AptosMoveExecutor {
-    type Transaction = RawTransaction;
+    // Unlike in Sui we use multiple calls
+    // We mimic multiple calls by using TransactionPayload::EntryFunction
+    // TODO: modify aptos to ignore "entry" check
+    type Transaction = TransactionPayload;
     type ObjectID = StateKey;
     // TODO: decide if we should use another wrapper to return
     // enum(StateValue, Script, Module) or just use StateVcaalue
@@ -69,7 +77,7 @@ impl Executor for AptosMoveExecutor {
 
     fn execute(
         &self,
-        tx: RawTransaction,
+        tx: TransactionPayload,
         override_objects: Vec<(StateKey, StateValue)>,
         _tracer: Option<()>,
     ) -> Result<TransactionResult> {

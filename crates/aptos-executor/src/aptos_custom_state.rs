@@ -112,10 +112,7 @@ impl TDelayedFieldView for AptosCustomState {
 
 impl ConfigStorage for AptosCustomState {
     fn fetch_config_bytes(&self, state_key: &StateKey) -> Option<Bytes> {
-        match self.kv_state.get(state_key) {
-            Some(v) => Some(v.bytes().clone()),
-            None => None,
-        }
+        self.kv_state.get(state_key).map(|v| v.bytes().clone())
     }
 }
 
