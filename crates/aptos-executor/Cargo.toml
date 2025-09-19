@@ -27,6 +27,6 @@ aptos-move-vm-runtime = { workspace = true }
 serde = { version = "1.0", features = ["derive"] }
 serde_yaml = "0.9"
 bcs = "0.1"
-
+dashmap = { workspace = true }
 anyhow = { workspace = true }
 executor = { workspace = true }

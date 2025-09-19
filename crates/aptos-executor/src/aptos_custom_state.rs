@@ -31,14 +31,15 @@ use aptos_vm_types::resolver::{
     TResourceGroupView, TResourceView,
 };
 use bytes::Bytes;
+use dashmap::DashMap;
 
 #[derive(Clone)]
 pub struct AptosCustomState {
     kv_state: HashMap<StateKey, StateValue>,
     tables: HashMap<(TableHandle, Vec<u8>), Bytes>,
     modules: HashMap<ModuleId, Bytes>,
-    scripts_deser: HashMap<[u8; 32], Arc<CompiledScript>>,
-    scripts_verified: HashMap<[u8; 32], Arc<Script>>,
+    scripts_deser: DashMap<[u8; 32], Arc<CompiledScript>>,
+    scripts_verified: DashMap<[u8; 32], Arc<Script>>,
     runtime_environment: RuntimeEnvironment,
 }
 
@@ -343,20 +344,43 @@ impl ScriptCache for AptosCustomState {
     type Deserialized = CompiledScript;
     type Verified = Script;
 
-    fn insert_deserialized_script(&self, _key: [u8; 32], _deserialized_script: CompiledScript) -> Arc<CompiledScript> {
-        todo!()
+    fn insert_deserialized_script(&self, key: [u8; 32], deserialized_script: CompiledScript) -> Arc<CompiledScript> {
+        let deserialized_script = Arc::new(deserialized_script);
+        self.scripts_deser.insert(key, deserialized_script.clone());
+        deserialized_script
     }
 
-    fn insert_verified_script(&self, _key: [u8; 32], _verified_script: Script) -> Arc<Script> {
-        todo!()
+    fn insert_verified_script(&self, key: [u8; 32], verified_script: Script) -> Arc<Script> {
+        let verified_script = Arc::new(verified_script);
+        self.scripts_verified.insert(key, verified_script.clone());
+        verified_script
     }
 
-    fn get_script(&self, _key: &[u8; 32]) -> Option<Code<CompiledScript, Script>> {
+    fn get_script(&self, key: &[u8; 32]) -> Option<Code<CompiledScript, Script>> {
+        if let Some(script) = self.scripts_deser.get(key) {
+            return Some(Code::from_deserialized(script.as_ref().clone()));
+        }
+
+        if let Some(script) = self.scripts_verified.get(key) {
+            return Some(Code::from_arced_verified(script.clone()));
+        }
+
         None
     }
 
     fn num_scripts(&self) -> usize {
-        0
+        let keys_deser = self
+            .scripts_deser
+            .iter()
+            .map(|item| *item.key())
+            .collect::<HashSet<_>>();
+        let keys_verified = self
+            .scripts_verified
+            .iter()
+            .map(|item| *item.key())
+            .collect::<HashSet<_>>();
+        let keys = keys_deser.union(&keys_verified).collect::<HashSet<_>>();
+        keys.len()
     }
 }
 
