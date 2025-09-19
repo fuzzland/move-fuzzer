@@ -1,8 +1,8 @@
 name: Integration Test
 
 on:
-  # pull_request:
-  #   branches: [master, main]
+  pull_request:
+    branches: [master, main]
 
 jobs:
   test:
