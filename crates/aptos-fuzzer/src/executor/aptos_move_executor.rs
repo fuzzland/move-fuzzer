@@ -10,8 +10,8 @@ use aptos_vm_logging::log_schema::AdapterLogSchema;
 use libafl::executors::HasObservers;
 use libafl_bolts::tuples::RefIndexable;
 
-use crate::aptos_custom_state::AptosCustomState;
-use crate::types::TransactionResult;
+use super::aptos_custom_state::AptosCustomState;
+use super::types::TransactionResult;
 
 pub struct AptosMoveExecutor<EM, I, S, Z> {
     vm: AptosVM,

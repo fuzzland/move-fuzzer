@@ -911,7 +911,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "aptos-fuzzer-executor"
+name = "aptos-fuzzer"
 version = "0.1.0"
 dependencies = [
  "anyhow",
@@ -938,34 +938,6 @@ dependencies = [
  "move-vm-types",
  "serde",
  "serde_yaml 0.9.34+deprecated",
-]
-
-[[package]]
-name = "aptos-fuzzer-input"
-version = "0.1.0"
-dependencies = [
- "libafl",
- "libafl_bolts",
- "serde",
-]
-
-[[package]]
-name = "aptos-fuzzer-mutator"
-version = "0.1.0"
-dependencies = [
- "aptos-fuzzer-input",
- "aptos-fuzzer-state",
- "libafl",
- "libafl_bolts",
-]
-
-[[package]]
-name = "aptos-fuzzer-state"
-version = "0.1.0"
-dependencies = [
- "aptos-fuzzer-input",
- "libafl",
- "libafl_bolts",
 ]
 
 [[package]]
@@ -5754,9 +5726,7 @@ dependencies = [
 name = "libafl-aptos"
 version = "0.1.0"
 dependencies = [
- "aptos-fuzzer-executor",
- "aptos-fuzzer-mutator",
- "aptos-fuzzer-state",
+ "aptos-fuzzer",
  "libafl",
  "libafl_bolts",
 ]

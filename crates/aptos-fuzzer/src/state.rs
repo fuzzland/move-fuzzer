@@ -1,4 +1,4 @@
-use aptos_fuzzer_input::AptosFuzzerInput;
+use crate::input::AptosFuzzerInput;
 use libafl::corpus::{CorpusId, HasCurrentCorpusId, HasTestcase, InMemoryCorpus};
 use libafl::state::{
     HasCorpus, HasCurrentStageId, HasExecutions, HasImported, HasLastFoundTime, HasLastReportTime, HasRand,
@@ -120,7 +120,6 @@ impl HasLastFoundTime for AptosFuzzerState {
 }
 
 impl HasSolutions<AptosFuzzerInput> for AptosFuzzerState {
-    // todo check if this is correct
     type Solutions = InMemoryCorpus<AptosFuzzerInput>;
 
     fn solutions(&self) -> &Self::Solutions {

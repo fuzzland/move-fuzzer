@@ -1,10 +1,9 @@
 [package]
-name = "aptos-fuzzer-executor"
-version = "0.1.0"
-edition = "2024"
+name = "aptos-fuzzer"
+edition.workspace = true
+version.workspace = true
 
 [dependencies]
-# Core Aptos dependencies for state management and execution
 aptos-config = { workspace = true }
 aptos-db = { workspace = true }
 aptos-executor = { workspace = true }
@@ -19,16 +18,14 @@ aptos-aggregator = { workspace = true }
 aptos-move-table-extension = { workspace = true }
 aptos-move-core-types = { workspace = true }
 aptos-move-binary-format = { workspace = true }
-bytes = { workspace = true }
 aptos-move-vm-types = { workspace = true }
 aptos-move-vm-runtime = { workspace = true }
-
-# Basic utilities
-serde = { version = "1.0", features = ["derive"] }
-serde_yaml = "0.9"
-bcs = "0.1"
-dashmap = { workspace = true }
-anyhow = { workspace = true }
+bytes = { workspace = true }
 
 libafl = { workspace = true }
 libafl_bolts = { workspace = true }
+serde = { workspace = true }
+serde_yaml = "0.9"
+bcs = { workspace = true }
+dashmap = { workspace = true }
+anyhow = { workspace = true }

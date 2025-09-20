@@ -1,9 +1,0 @@
-[package]
-name = "aptos-fuzzer-state"
-edition.workspace = true
-version.workspace = true
-
-[dependencies]
-libafl = { workspace = true }
-libafl_bolts = { workspace = true }
-aptos-fuzzer-input = { workspace = true }

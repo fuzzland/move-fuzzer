@@ -1,6 +1,4 @@
-use aptos_fuzzer_executor::aptos_move_executor::AptosMoveExecutor;
-use aptos_fuzzer_mutator::AptosFuzzerMutator;
-use aptos_fuzzer_state::AptosFuzzerState;
+use aptos_fuzzer::{AptosFuzzerMutator, AptosFuzzerState, AptosMoveExecutor};
 use libafl::events::SimpleEventManager;
 use libafl::feedbacks::MaxMapFeedback;
 use libafl::fuzzer::Fuzzer;

@@ -10,10 +10,7 @@ members = [
     # "crates/sui-fuzzer",
     # "crates/sui-simulator",
 
-    "crates/aptos-fuzzer-executor",
-    "crates/aptos-fuzzer-mutator",
-    "crates/aptos-fuzzer-state",
-    "crates/aptos-fuzzer-input",
+    "crates/aptos-fuzzer",
 ]
 
 [workspace.package]
@@ -21,10 +18,7 @@ edition = "2021"
 version = "0.1.0"
 
 [workspace.dependencies]
-aptos-fuzzer-executor = { path = "crates/aptos-fuzzer-executor" }
-aptos-fuzzer-mutator = { path = "crates/aptos-fuzzer-mutator" }
-aptos-fuzzer-state = { path = "crates/aptos-fuzzer-state" }
-aptos-fuzzer-input = { path = "crates/aptos-fuzzer-input" }
+aptos-fuzzer = { path = "crates/aptos-fuzzer" }
 
 libafl = { version = "0.15.3" }
 libafl_bolts = { version = "0.15.3" }

@@ -1,7 +1,7 @@
 use std::borrow::Cow;
 
-use aptos_fuzzer_input::AptosFuzzerInput;
-use aptos_fuzzer_state::AptosFuzzerState;
+use crate::input::AptosFuzzerInput;
+use crate::state::AptosFuzzerState;
 use libafl::mutators::Mutator;
 use libafl_bolts::Named;
 
