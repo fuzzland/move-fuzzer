@@ -1,10 +1,15 @@
-use libafl::corpus::{CorpusId, HasCurrentCorpusId, HasTestcase, InMemoryCorpus};
+use std::cell::{Ref, RefMut};
+use std::time::Duration;
+
+use libafl::corpus::{CorpusId, HasCurrentCorpusId, HasTestcase, InMemoryCorpus, Testcase};
+use libafl::stages::StageId;
 use libafl::state::{
     HasCorpus, HasCurrentStageId, HasExecutions, HasImported, HasLastFoundTime, HasLastReportTime, HasRand,
     HasSolutions, Stoppable,
 };
 use libafl::{HasMetadata, HasNamedMetadata};
 use libafl_bolts::rands::StdRand;
+use libafl_bolts::serdeany::{NamedSerdeAnyMap, SerdeAnyMap};
 
 use crate::executor::aptos_custom_state::AptosCustomState;
 use crate::input::AptosFuzzerInput;
@@ -12,9 +17,13 @@ use crate::input::AptosFuzzerInput;
 pub struct AptosFuzzerState {
     corpus: InMemoryCorpus<AptosFuzzerInput>,
     rand: StdRand,
-
     aptos_state: AptosCustomState,
     stop_requested: bool,
+    metadata_map: SerdeAnyMap,
+    named_metadata_map: NamedSerdeAnyMap,
+    last_found_time: Duration,
+    last_report_time: Option<Duration>,
+    executions: u64,
 }
 
 impl AptosFuzzerState {
@@ -24,6 +33,11 @@ impl AptosFuzzerState {
             rand: StdRand::new(),
             aptos_state: AptosCustomState::new_default(),
             stop_requested: false,
+            metadata_map: SerdeAnyMap::new(),
+            named_metadata_map: NamedSerdeAnyMap::new(),
+            last_found_time: Duration::from_secs(0),
+            last_report_time: None,
+            executions: 0,
         }
     }
 }
@@ -87,42 +101,42 @@ impl Stoppable for AptosFuzzerState {
 }
 
 impl HasMetadata for AptosFuzzerState {
-    fn metadata_map(&self) -> &libafl_bolts::serdeany::SerdeAnyMap {
-        todo!()
+    fn metadata_map(&self) -> &SerdeAnyMap {
+        &self.metadata_map
     }
 
-    fn metadata_map_mut(&mut self) -> &mut libafl_bolts::serdeany::SerdeAnyMap {
-        todo!()
+    fn metadata_map_mut(&mut self) -> &mut SerdeAnyMap {
+        &mut self.metadata_map
     }
 }
 
 impl HasNamedMetadata for AptosFuzzerState {
-    fn named_metadata_map(&self) -> &libafl_bolts::serdeany::NamedSerdeAnyMap {
-        todo!()
+    fn named_metadata_map(&self) -> &NamedSerdeAnyMap {
+        &self.named_metadata_map
     }
 
-    fn named_metadata_map_mut(&mut self) -> &mut libafl_bolts::serdeany::NamedSerdeAnyMap {
-        todo!()
+    fn named_metadata_map_mut(&mut self) -> &mut NamedSerdeAnyMap {
+        &mut self.named_metadata_map
     }
 }
 
 impl HasExecutions for AptosFuzzerState {
     fn executions(&self) -> &u64 {
-        todo!()
+        &self.executions
     }
 
     fn executions_mut(&mut self) -> &mut u64 {
-        todo!()
+        &mut self.executions
     }
 }
 
 impl HasLastFoundTime for AptosFuzzerState {
-    fn last_found_time(&self) -> &std::time::Duration {
-        todo!()
+    fn last_found_time(&self) -> &Duration {
+        &self.last_found_time
     }
 
-    fn last_found_time_mut(&mut self) -> &mut std::time::Duration {
-        todo!()
+    fn last_found_time_mut(&mut self) -> &mut Duration {
+        &mut self.last_found_time
     }
 }
 
@@ -130,26 +144,20 @@ impl HasSolutions<AptosFuzzerInput> for AptosFuzzerState {
     type Solutions = InMemoryCorpus<AptosFuzzerInput>;
 
     fn solutions(&self) -> &Self::Solutions {
-        todo!()
+        &self.corpus
     }
 
     fn solutions_mut(&mut self) -> &mut Self::Solutions {
-        todo!()
+        &mut self.corpus
     }
 }
 
 impl HasTestcase<AptosFuzzerInput> for AptosFuzzerState {
-    fn testcase(
-        &self,
-        id: CorpusId,
-    ) -> Result<std::cell::Ref<'_, libafl::corpus::Testcase<AptosFuzzerInput>>, libafl::Error> {
+    fn testcase(&self, id: CorpusId) -> Result<Ref<'_, Testcase<AptosFuzzerInput>>, libafl::Error> {
         todo!()
     }
 
-    fn testcase_mut(
-        &self,
-        id: CorpusId,
-    ) -> Result<std::cell::RefMut<'_, libafl::corpus::Testcase<AptosFuzzerInput>>, libafl::Error> {
+    fn testcase_mut(&self, id: CorpusId) -> Result<RefMut<'_, Testcase<AptosFuzzerInput>>, libafl::Error> {
         todo!()
     }
 }
@@ -165,17 +173,17 @@ impl HasImported for AptosFuzzerState {
 }
 
 impl HasLastReportTime for AptosFuzzerState {
-    fn last_report_time(&self) -> &Option<std::time::Duration> {
-        todo!()
+    fn last_report_time(&self) -> &Option<Duration> {
+        &self.last_report_time
     }
 
-    fn last_report_time_mut(&mut self) -> &mut Option<std::time::Duration> {
-        todo!()
+    fn last_report_time_mut(&mut self) -> &mut Option<Duration> {
+        &mut self.last_report_time
     }
 }
 
 impl HasCurrentStageId for AptosFuzzerState {
-    fn set_current_stage_id(&mut self, id: libafl::stages::StageId) -> Result<(), libafl::Error> {
+    fn set_current_stage_id(&mut self, id: StageId) -> Result<(), libafl::Error> {
         todo!()
     }
 
@@ -183,7 +191,7 @@ impl HasCurrentStageId for AptosFuzzerState {
         todo!()
     }
 
-    fn current_stage_id(&self) -> Result<Option<libafl::stages::StageId>, libafl::Error> {
+    fn current_stage_id(&self) -> Result<Option<StageId>, libafl::Error> {
         todo!()
     }
 }
