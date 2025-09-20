@@ -1,4 +1,3 @@
-use crate::input::AptosFuzzerInput;
 use libafl::corpus::{CorpusId, HasCurrentCorpusId, HasTestcase, InMemoryCorpus};
 use libafl::state::{
     HasCorpus, HasCurrentStageId, HasExecutions, HasImported, HasLastFoundTime, HasLastReportTime, HasRand,
@@ -7,9 +6,15 @@ use libafl::state::{
 use libafl::{HasMetadata, HasNamedMetadata};
 use libafl_bolts::rands::StdRand;
 
+use crate::executor::aptos_custom_state::AptosCustomState;
+use crate::input::AptosFuzzerInput;
+
 pub struct AptosFuzzerState {
     corpus: InMemoryCorpus<AptosFuzzerInput>,
     rand: StdRand,
+
+    aptos_state: AptosCustomState,
+    stop_requested: bool,
 }
 
 impl AptosFuzzerState {
@@ -17,6 +22,8 @@ impl AptosFuzzerState {
         Self {
             corpus: InMemoryCorpus::new(),
             rand: StdRand::new(),
+            aptos_state: AptosCustomState::new_default(),
+            stop_requested: false,
         }
     }
 }
@@ -67,15 +74,15 @@ impl HasCurrentCorpusId for AptosFuzzerState {
 
 impl Stoppable for AptosFuzzerState {
     fn stop_requested(&self) -> bool {
-        todo!()
+        self.stop_requested
     }
 
     fn request_stop(&mut self) {
-        todo!()
+        self.stop_requested = true;
     }
 
     fn discard_stop_request(&mut self) {
-        todo!()
+        self.stop_requested = false;
     }
 }
 

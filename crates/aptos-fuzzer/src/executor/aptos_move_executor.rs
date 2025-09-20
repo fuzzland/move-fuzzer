@@ -1,26 +1,23 @@
 use std::marker::PhantomData;
 
 use anyhow::Result;
-use aptos_types::state_store::state_key::StateKey;
-use aptos_types::state_store::state_value::StateValue;
 use aptos_types::transaction::{SignedTransaction, TransactionPayload};
-use aptos_types::write_set::WriteSet;
 use aptos_vm::AptosVM;
 use aptos_vm_logging::log_schema::AdapterLogSchema;
-use libafl::executors::HasObservers;
+use libafl::executors::{Executor, ExitKind, HasObservers};
 use libafl_bolts::tuples::RefIndexable;
 
 use super::aptos_custom_state::AptosCustomState;
 use super::types::TransactionResult;
+use crate::{AptosFuzzerInput, AptosFuzzerState};
 
-pub struct AptosMoveExecutor<EM, I, S, Z> {
+pub struct AptosMoveExecutor<EM, Z> {
     vm: AptosVM,
-    state: AptosCustomState,
 
-    _phantom: PhantomData<(EM, I, S, Z)>,
+    _phantom: PhantomData<(EM, Z)>,
 }
 
-impl<EM, I, S, Z> AptosMoveExecutor<EM, I, S, Z> {
+impl<EM, Z> AptosMoveExecutor<EM, Z> {
     pub fn new() -> Self {
         todo!()
     }
@@ -29,17 +26,21 @@ impl<EM, I, S, Z> AptosMoveExecutor<EM, I, S, Z> {
         todo!()
     }
 
-    pub fn execute_transaction(&self, transaction: TransactionPayload) -> Result<TransactionResult> {
+    pub fn execute_transaction(
+        &self,
+        transaction: TransactionPayload,
+        state: &AptosCustomState,
+    ) -> Result<TransactionResult> {
         let (vm_status, vm_output) = self.vm.execute_user_transaction(
-            &self.state,
-            &self.state,
+            state,
+            state,
             &Self::to_signed_transaction(transaction),
-            &AdapterLogSchema::new(self.state.id(), 0),
+            &AdapterLogSchema::new(state.id(), 0),
             &aptos_types::transaction::AuxiliaryInfo::new(aptos_types::transaction::PersistedAuxiliaryInfo::None, None),
         );
 
         let txn_output = vm_output
-            .try_materialize_into_transaction_output(&self.state)
+            .try_materialize_into_transaction_output(state)
             .expect("Materializing aggregator deltas should not fail");
 
         Ok(TransactionResult {
@@ -50,41 +51,21 @@ impl<EM, I, S, Z> AptosMoveExecutor<EM, I, S, Z> {
             fee_statement: txn_output.try_extract_fee_statement().ok().flatten(),
         })
     }
-
-    pub fn execute_transaction_with_overlay(
-        &self,
-        transaction: TransactionPayload,
-        override_objects: Vec<(StateKey, StateValue)>,
-    ) -> Result<TransactionResult> {
-        todo!()
-    }
-
-    pub fn get_object(&self, object_id: &StateKey) -> Option<StateValue> {
-        todo!()
-    }
-
-    pub fn multi_get_objects(&self, object_ids: &[StateKey]) -> Vec<Option<StateValue>> {
-        todo!()
-    }
-
-    pub fn commit(&self, write_set: WriteSet) -> Result<()> {
-        todo!()
-    }
 }
 
-impl<EM, I, S, Z> libafl::executors::Executor<EM, I, S, Z> for AptosMoveExecutor<EM, I, S, Z> {
+impl<EM, Z> Executor<EM, AptosFuzzerInput, AptosFuzzerState, Z> for AptosMoveExecutor<EM, Z> {
     fn run_target(
         &mut self,
         fuzzer: &mut Z,
-        state: &mut S,
+        state: &mut AptosFuzzerState,
         mgr: &mut EM,
-        input: &I,
-    ) -> std::result::Result<libafl::executors::ExitKind, libafl::Error> {
+        input: &AptosFuzzerInput,
+    ) -> Result<ExitKind, libafl::Error> {
         todo!()
     }
 }
 
-impl<EM, I, S, Z> HasObservers for AptosMoveExecutor<EM, I, S, Z> {
+impl<EM, Z> HasObservers for AptosMoveExecutor<EM, Z> {
     type Observers = ();
 
     fn observers(&self) -> RefIndexable<&Self::Observers, Self::Observers> {
