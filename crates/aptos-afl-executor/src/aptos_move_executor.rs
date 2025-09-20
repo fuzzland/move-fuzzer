@@ -1,21 +1,31 @@
+use std::marker::PhantomData;
+
 use anyhow::Result;
 use aptos_types::state_store::state_key::StateKey;
 use aptos_types::state_store::state_value::StateValue;
-use aptos_types::transaction::{RawTransaction, SignedTransaction, TransactionPayload};
+use aptos_types::transaction::{SignedTransaction, TransactionPayload};
 use aptos_types::write_set::WriteSet;
 use aptos_vm::AptosVM;
 use aptos_vm_logging::log_schema::AdapterLogSchema;
 use executor::Executor;
+use libafl::executors::HasObservers;
+use libafl_bolts::tuples::RefIndexable;
 
 use crate::aptos_custom_state::AptosCustomState;
 use crate::types::TransactionResult;
 
-pub struct AptosMoveExecutor {
+pub struct AptosMoveExecutor<EM, I, S, Z> {
     vm: AptosVM,
     state: AptosCustomState,
+
+    _phantom: PhantomData<(EM, I, S, Z)>,
 }
 
-impl AptosMoveExecutor {
+impl<EM, I, S, Z> AptosMoveExecutor<EM, I, S, Z> {
+    pub fn new() -> Self {
+        todo!()
+    }
+
     fn to_signed_transaction(input: TransactionPayload) -> SignedTransaction {
         todo!()
     }
@@ -63,7 +73,7 @@ impl AptosMoveExecutor {
     }
 }
 
-impl Executor for AptosMoveExecutor {
+impl<EM, I, S, Z> Executor for AptosMoveExecutor<EM, I, S, Z> {
     // Unlike in Sui we use multiple calls
     // We mimic multiple calls by using TransactionPayload::EntryFunction
     // TODO: modify aptos to ignore "entry" check
@@ -94,5 +104,29 @@ impl Executor for AptosMoveExecutor {
 
     fn name(&self) -> &str {
         "AptosMoveExecutor"
+    }
+}
+
+impl<EM, I, S, Z> libafl::executors::Executor<EM, I, S, Z> for AptosMoveExecutor<EM, I, S, Z> {
+    fn run_target(
+        &mut self,
+        fuzzer: &mut Z,
+        state: &mut S,
+        mgr: &mut EM,
+        input: &I,
+    ) -> std::result::Result<libafl::executors::ExitKind, libafl::Error> {
+        todo!()
+    }
+}
+
+impl<EM, I, S, Z> HasObservers for AptosMoveExecutor<EM, I, S, Z> {
+    type Observers = ();
+
+    fn observers(&self) -> RefIndexable<&Self::Observers, Self::Observers> {
+        todo!()
+    }
+
+    fn observers_mut(&mut self) -> RefIndexable<&mut Self::Observers, Self::Observers> {
+        todo!()
     }
 }

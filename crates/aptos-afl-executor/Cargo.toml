@@ -1,5 +1,5 @@
 [package]
-name = "aptos-executor"
+name = "aptos-afl-executor"
 version = "0.1.0"
 edition = "2024"
 
@@ -30,3 +30,6 @@ bcs = "0.1"
 dashmap = { workspace = true }
 anyhow = { workspace = true }
 executor = { workspace = true }
+
+libafl = { workspace = true }
+libafl_bolts = { workspace = true }

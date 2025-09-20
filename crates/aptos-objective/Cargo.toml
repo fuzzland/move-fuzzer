@@ -1,0 +1,7 @@
+[package]
+name = "aptos-objective"
+edition.workspace = true
+version.workspace = true
+
+[dependencies]
+libafl = { workspace = true }
