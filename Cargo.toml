@@ -12,7 +12,6 @@ members = [
     # "crates/sui-simulator",
 
     "crates/aptos-afl-executor",
-    "crates/aptos-generator",
     "crates/aptos-mutator",
     "crates/aptos-objective",
     "crates/aptos-fuzzer-state",
@@ -27,7 +26,6 @@ version = "0.1.0"
 [workspace.dependencies]
 executor = { path = "crates/executor" }
 aptos-afl-executor = { path = "crates/aptos-afl-executor" }
-aptos-generator = { path = "crates/aptos-generator" }
 aptos-mutator = { path = "crates/aptos-mutator" }
 aptos-objective = { path = "crates/aptos-objective" }
 aptos-fuzzer-state = { path = "crates/aptos-fuzzer-state" }
