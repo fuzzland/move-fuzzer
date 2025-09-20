@@ -1,8 +1,0 @@
-[package]
-name = "aptos-fuzzer-common"
-edition.workspace = true
-version.workspace = true
-
-[dependencies]
-aptos-fuzzer-state = { workspace = true }
-aptos-fuzzer-input = { workspace = true }

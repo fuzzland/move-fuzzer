@@ -5,7 +5,6 @@ members = [
     # "bin/fuzzer",
     "bin/libafl-aptos",
 
-    "crates/executor",
     # "crates/fuzzer-core",
     # "crates/sui-tracer",
     # "crates/sui-fuzzer",
@@ -14,7 +13,6 @@ members = [
     "crates/aptos-fuzzer-executor",
     "crates/aptos-fuzzer-mutator",
     "crates/aptos-fuzzer-state",
-    "crates/aptos-fuzzer-common",
     "crates/aptos-fuzzer-input",
 ]
 
@@ -23,11 +21,9 @@ edition = "2021"
 version = "0.1.0"
 
 [workspace.dependencies]
-executor = { path = "crates/executor" }
 aptos-fuzzer-executor = { path = "crates/aptos-fuzzer-executor" }
 aptos-fuzzer-mutator = { path = "crates/aptos-fuzzer-mutator" }
 aptos-fuzzer-state = { path = "crates/aptos-fuzzer-state" }
-aptos-fuzzer-common = { path = "crates/aptos-fuzzer-common" }
 aptos-fuzzer-input = { path = "crates/aptos-fuzzer-input" }
 
 libafl = { version = "0.15.3" }

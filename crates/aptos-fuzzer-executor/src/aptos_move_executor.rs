@@ -7,7 +7,6 @@ use aptos_types::transaction::{SignedTransaction, TransactionPayload};
 use aptos_types::write_set::WriteSet;
 use aptos_vm::AptosVM;
 use aptos_vm_logging::log_schema::AdapterLogSchema;
-use executor::Executor;
 use libafl::executors::HasObservers;
 use libafl_bolts::tuples::RefIndexable;
 
@@ -70,40 +69,6 @@ impl<EM, I, S, Z> AptosMoveExecutor<EM, I, S, Z> {
 
     pub fn commit(&self, write_set: WriteSet) -> Result<()> {
         todo!()
-    }
-}
-
-impl<EM, I, S, Z> Executor for AptosMoveExecutor<EM, I, S, Z> {
-    // Unlike in Sui we use multiple calls
-    // We mimic multiple calls by using TransactionPayload::EntryFunction
-    // TODO: modify aptos to ignore "entry" check
-    type Transaction = TransactionPayload;
-    type ObjectID = StateKey;
-    // TODO: decide if we should use another wrapper to return
-    // enum(StateValue, Script, Module) or just use StateVcaalue
-    type Object = StateValue;
-    type ExecutionResult = TransactionResult;
-    type Tracer = ();
-
-    fn execute(
-        &self,
-        tx: TransactionPayload,
-        override_objects: Vec<(StateKey, StateValue)>,
-        _tracer: Option<()>,
-    ) -> Result<TransactionResult> {
-        self.execute_transaction_with_overlay(tx, override_objects)
-    }
-
-    fn get_object(&self, object_id_bytes: &StateKey) -> Option<StateValue> {
-        self.get_object(object_id_bytes)
-    }
-
-    fn multi_get_objects(&self, object_ids: &[StateKey]) -> Vec<Option<StateValue>> {
-        self.multi_get_objects(object_ids)
-    }
-
-    fn name(&self) -> &str {
-        "AptosMoveExecutor"
     }
 }
 

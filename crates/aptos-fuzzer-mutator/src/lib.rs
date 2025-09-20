@@ -1,13 +1,12 @@
 use std::borrow::Cow;
 
-use aptos_fuzzer_common::{AptosFuzzerInput, AptosFuzzerState};
+use aptos_fuzzer_input::AptosFuzzerInput;
+use aptos_fuzzer_state::AptosFuzzerState;
 use libafl::mutators::Mutator;
 use libafl_bolts::Named;
 
 #[derive(Default)]
-pub struct AptosFuzzerMutator {
-    _rng: (),
-}
+pub struct AptosFuzzerMutator {}
 
 impl Mutator<AptosFuzzerInput, AptosFuzzerState> for AptosFuzzerMutator {
     fn mutate(

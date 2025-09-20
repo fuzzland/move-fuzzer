@@ -6,4 +6,5 @@ version.workspace = true
 [dependencies]
 libafl = { workspace = true }
 libafl_bolts = { workspace = true }
-aptos-fuzzer-common = { workspace = true }
+aptos-fuzzer-input = { workspace = true }
+aptos-fuzzer-state = { workspace = true }

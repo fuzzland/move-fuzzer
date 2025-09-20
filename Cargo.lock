@@ -911,14 +911,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "aptos-fuzzer-common"
-version = "0.1.0"
-dependencies = [
- "aptos-fuzzer-input",
- "aptos-fuzzer-state",
-]
-
-[[package]]
 name = "aptos-fuzzer-executor"
 version = "0.1.0"
 dependencies = [
@@ -937,7 +929,6 @@ dependencies = [
  "bcs 0.1.6",
  "bytes",
  "dashmap 6.1.0",
- "executor",
  "libafl",
  "libafl_bolts",
  "move-binary-format",
@@ -962,7 +953,8 @@ dependencies = [
 name = "aptos-fuzzer-mutator"
 version = "0.1.0"
 dependencies = [
- "aptos-fuzzer-common",
+ "aptos-fuzzer-input",
+ "aptos-fuzzer-state",
  "libafl",
  "libafl_bolts",
 ]
@@ -4225,13 +4217,6 @@ name = "ethnum"
 version = "1.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ca81e6b4777c89fd810c25a4be2b1bd93ea034fbe58e6a75216a34c6b82c539b"
-
-[[package]]
-name = "executor"
-version = "0.1.0"
-dependencies = [
- "anyhow",
-]
 
 [[package]]
 name = "fail"

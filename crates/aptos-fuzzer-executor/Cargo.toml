@@ -29,7 +29,6 @@ serde_yaml = "0.9"
 bcs = "0.1"
 dashmap = { workspace = true }
 anyhow = { workspace = true }
-executor = { workspace = true }
 
 libafl = { workspace = true }
 libafl_bolts = { workspace = true }
