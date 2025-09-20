@@ -1,5 +1,5 @@
 [package]
-name = "aptos-mutator"
+name = "aptos-fuzzer-mutator"
 edition.workspace = true
 version.workspace = true
 

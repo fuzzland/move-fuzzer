@@ -243,37 +243,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "aptos-afl-executor"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "aptos-aggregator",
- "aptos-config",
- "aptos-db",
- "aptos-executor",
- "aptos-storage-interface",
- "aptos-types",
- "aptos-vm",
- "aptos-vm-environment",
- "aptos-vm-genesis",
- "aptos-vm-logging",
- "aptos-vm-types",
- "bcs 0.1.6",
- "bytes",
- "dashmap 6.1.0",
- "executor",
- "libafl",
- "libafl_bolts",
- "move-binary-format",
- "move-core-types",
- "move-table-extension",
- "move-vm-runtime",
- "move-vm-types",
- "serde",
- "serde_yaml 0.9.34+deprecated",
-]
-
-[[package]]
 name = "aptos-aggregator"
 version = "0.1.0"
 source = "git+https://github.com/fuzzland/aptos-core?rev=1e5097063214a84f794ed2373f66a9d325bf6ca4#1e5097063214a84f794ed2373f66a9d325bf6ca4"
@@ -950,12 +919,52 @@ dependencies = [
 ]
 
 [[package]]
+name = "aptos-fuzzer-executor"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "aptos-aggregator",
+ "aptos-config",
+ "aptos-db",
+ "aptos-executor",
+ "aptos-storage-interface",
+ "aptos-types",
+ "aptos-vm",
+ "aptos-vm-environment",
+ "aptos-vm-genesis",
+ "aptos-vm-logging",
+ "aptos-vm-types",
+ "bcs 0.1.6",
+ "bytes",
+ "dashmap 6.1.0",
+ "executor",
+ "libafl",
+ "libafl_bolts",
+ "move-binary-format",
+ "move-core-types",
+ "move-table-extension",
+ "move-vm-runtime",
+ "move-vm-types",
+ "serde",
+ "serde_yaml 0.9.34+deprecated",
+]
+
+[[package]]
 name = "aptos-fuzzer-input"
 version = "0.1.0"
 dependencies = [
  "libafl",
  "libafl_bolts",
  "serde",
+]
+
+[[package]]
+name = "aptos-fuzzer-mutator"
+version = "0.1.0"
+dependencies = [
+ "aptos-fuzzer-common",
+ "libafl",
+ "libafl_bolts",
 ]
 
 [[package]]
@@ -1320,15 +1329,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "aptos-mutator"
-version = "0.1.0"
-dependencies = [
- "aptos-fuzzer-common",
- "libafl",
- "libafl_bolts",
-]
-
-[[package]]
 name = "aptos-mvhashmap"
 version = "0.1.0"
 source = "git+https://github.com/fuzzland/aptos-core?rev=1e5097063214a84f794ed2373f66a9d325bf6ca4#1e5097063214a84f794ed2373f66a9d325bf6ca4"
@@ -1453,13 +1453,6 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 1.0.109",
-]
-
-[[package]]
-name = "aptos-objective"
-version = "0.1.0"
-dependencies = [
- "libafl",
 ]
 
 [[package]]
@@ -4536,21 +4529,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "fuzzer-core"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "async-trait",
- "hex",
- "lru",
- "rand 0.9.2",
- "serde",
- "serde_json",
- "tokio",
- "tracing",
-]
-
-[[package]]
 name = "fxhash"
 version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5791,10 +5769,9 @@ dependencies = [
 name = "libafl-aptos"
 version = "0.1.0"
 dependencies = [
- "aptos-afl-executor",
+ "aptos-fuzzer-executor",
+ "aptos-fuzzer-mutator",
  "aptos-fuzzer-state",
- "aptos-mutator",
- "aptos-objective",
  "libafl",
  "libafl_bolts",
 ]

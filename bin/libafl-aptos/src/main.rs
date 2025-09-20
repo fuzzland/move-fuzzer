@@ -1,6 +1,6 @@
-use aptos_afl_executor::aptos_move_executor::AptosMoveExecutor;
+use aptos_fuzzer_executor::aptos_move_executor::AptosMoveExecutor;
+use aptos_fuzzer_mutator::AptosFuzzerMutator;
 use aptos_fuzzer_state::AptosFuzzerState;
-use aptos_mutator::AptosMutator;
 use libafl::events::SimpleEventManager;
 use libafl::feedbacks::MaxMapFeedback;
 use libafl::fuzzer::Fuzzer;
@@ -33,7 +33,7 @@ fn main() {
 
     let mut executor = AptosMoveExecutor::new();
     let mut state = AptosFuzzerState::new();
-    let mutator = AptosMutator::default();
+    let mutator = AptosFuzzerMutator::default();
 
     let mut stages = tuple_list!(StdMutationalStage::new(mutator));
 

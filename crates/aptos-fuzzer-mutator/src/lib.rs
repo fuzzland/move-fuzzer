@@ -5,11 +5,11 @@ use libafl::mutators::Mutator;
 use libafl_bolts::Named;
 
 #[derive(Default)]
-pub struct AptosMutator {
+pub struct AptosFuzzerMutator {
     _rng: (),
 }
 
-impl Mutator<AptosFuzzerInput, AptosFuzzerState> for AptosMutator {
+impl Mutator<AptosFuzzerInput, AptosFuzzerState> for AptosFuzzerMutator {
     fn mutate(
         &mut self,
         state: &mut AptosFuzzerState,
@@ -27,9 +27,9 @@ impl Mutator<AptosFuzzerInput, AptosFuzzerState> for AptosMutator {
     }
 }
 
-impl Named for AptosMutator {
+impl Named for AptosFuzzerMutator {
     fn name(&self) -> &Cow<'static, str> {
-        static NAME: Cow<'static, str> = Cow::Borrowed("AptosMutator");
+        static NAME: Cow<'static, str> = Cow::Borrowed("AptosFuzzerMutator");
         &NAME
     }
 }
