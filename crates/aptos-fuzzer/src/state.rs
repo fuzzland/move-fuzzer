@@ -16,6 +16,8 @@ use crate::input::AptosFuzzerInput;
 
 pub struct AptosFuzzerState {
     corpus: InMemoryCorpus<AptosFuzzerInput>,
+    solutions: InMemoryCorpus<AptosFuzzerInput>,
+
     rand: StdRand,
     aptos_state: AptosCustomState,
     stop_requested: bool,
@@ -24,12 +26,14 @@ pub struct AptosFuzzerState {
     last_found_time: Duration,
     last_report_time: Option<Duration>,
     executions: u64,
+    imported: usize,
 }
 
 impl AptosFuzzerState {
     pub fn new() -> Self {
         Self {
             corpus: InMemoryCorpus::new(),
+            solutions: InMemoryCorpus::new(),
             rand: StdRand::new(),
             aptos_state: AptosCustomState::new_default(),
             stop_requested: false,
@@ -40,6 +44,14 @@ impl AptosFuzzerState {
             executions: 0,
         }
     }
+
+    pub fn aptos_state(&self) -> &AptosCustomState {
+        &self.aptos_state
+    }
+
+    pub fn aptos_state_mut(&mut self) -> &mut AptosCustomState {
+        &mut self.aptos_state
+    }
 }
 
 impl Default for AptosFuzzerState {
@@ -48,14 +60,15 @@ impl Default for AptosFuzzerState {
     }
 }
 
+// initial inputs
 impl HasCorpus<AptosFuzzerInput> for AptosFuzzerState {
     type Corpus = InMemoryCorpus<AptosFuzzerInput>;
 
-    fn corpus(&self) -> &Self::Corpus {
+    fn corpus(&self) -> &InMemoryCorpus<AptosFuzzerInput> {
         &self.corpus
     }
 
-    fn corpus_mut(&mut self) -> &mut Self::Corpus {
+    fn corpus_mut(&mut self) -> &mut InMemoryCorpus<AptosFuzzerInput> {
         &mut self.corpus
     }
 }
@@ -63,11 +76,11 @@ impl HasCorpus<AptosFuzzerInput> for AptosFuzzerState {
 impl HasRand for AptosFuzzerState {
     type Rand = StdRand;
 
-    fn rand(&self) -> &Self::Rand {
+    fn rand(&self) -> &StdRand {
         &self.rand
     }
 
-    fn rand_mut(&mut self) -> &mut Self::Rand {
+    fn rand_mut(&mut self) -> &mut StdRand {
         &mut self.rand
     }
 }
@@ -140,15 +153,15 @@ impl HasLastFoundTime for AptosFuzzerState {
     }
 }
 
+// inputs that can trigger a bug
 impl HasSolutions<AptosFuzzerInput> for AptosFuzzerState {
     type Solutions = InMemoryCorpus<AptosFuzzerInput>;
-
-    fn solutions(&self) -> &Self::Solutions {
-        &self.corpus
+    fn solutions(&self) -> &InMemoryCorpus<AptosFuzzerInput> {
+        &self.solutions
     }
 
-    fn solutions_mut(&mut self) -> &mut Self::Solutions {
-        &mut self.corpus
+    fn solutions_mut(&mut self) -> &mut InMemoryCorpus<AptosFuzzerInput> {
+        &mut self.solutions
     }
 }
 
@@ -164,11 +177,11 @@ impl HasTestcase<AptosFuzzerInput> for AptosFuzzerState {
 
 impl HasImported for AptosFuzzerState {
     fn imported(&self) -> &usize {
-        todo!()
+        &self.imported
     }
 
     fn imported_mut(&mut self) -> &mut usize {
-        todo!()
+        &mut self.imported
     }
 }
 
