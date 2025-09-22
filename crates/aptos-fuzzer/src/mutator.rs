@@ -1,9 +1,10 @@
 use std::borrow::Cow;
 
-use crate::input::AptosFuzzerInput;
-use crate::state::AptosFuzzerState;
 use libafl::mutators::Mutator;
 use libafl_bolts::Named;
+
+use crate::input::AptosFuzzerInput;
+use crate::state::AptosFuzzerState;
 
 #[derive(Default)]
 pub struct AptosFuzzerMutator {}

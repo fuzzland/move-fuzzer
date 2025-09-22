@@ -108,6 +108,7 @@ schemars = "1.0"
 # aptos-move-vm-runtime = { package = "move-vm-runtime", git = "https://github.com/fuzzland/aptos-core", rev = "1e5097063214a84f794ed2373f66a9d325bf6ca4" }
 
 aptos-config = { path = "./external/aptos-core/config" }
+aptos-crypto = { path = "./external/aptos-core/crates/aptos-crypto" }
 aptos-db = { path = "./external/aptos-core/storage/aptosdb" }
 aptos-executor = { path = "./external/aptos-core/execution/executor" }
 aptos-storage-interface = { path = "./external/aptos-core/storage/storage-interface" }

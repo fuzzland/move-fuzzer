@@ -1,10 +1,24 @@
 use std::marker::PhantomData;
+use std::sync::OnceLock;
 
 use anyhow::Result;
-use aptos_types::transaction::{SignedTransaction, TransactionPayload};
+use aptos_crypto::ed25519::{Ed25519PublicKey, Ed25519Signature, ED25519_PUBLIC_KEY_LENGTH, ED25519_SIGNATURE_LENGTH};
+use aptos_move_core_types::account_address::AccountAddress;
+use aptos_move_core_types::identifier::IdentStr;
+use aptos_move_core_types::language_storage::TypeTag;
+use aptos_move_core_types::value::{self, MoveValue};
+use aptos_move_vm_runtime::move_vm::SerializedReturnValues;
+use aptos_move_vm_runtime::{LegacyLoaderConfig, ScriptLoader};
+use aptos_move_vm_types::gas::UnmeteredGasMeter;
+use aptos_types::chain_id::ChainId;
+use aptos_types::transaction::authenticator::{
+    AccountAuthenticator, AnyPublicKey, AnySignature, SingleKeyAuthenticator, TransactionAuthenticator,
+};
+use aptos_types::transaction::{RawTransaction, SignedTransaction, TransactionPayload};
+use aptos_vm::move_vm_ext::SessionId;
 use aptos_vm::AptosVM;
-use aptos_vm_environment::environment::AptosEnvironment;
-use aptos_vm_logging::log_schema::AdapterLogSchema;
+use aptos_vm_types::module_write_set::ModuleWriteSet;
+use aptos_vm_types::storage::change_set_configs::ChangeSetConfigs;
 use libafl::executors::{Executor, ExitKind, HasObservers};
 use libafl_bolts::tuples::RefIndexable;
 
@@ -27,7 +41,32 @@ impl<EM, Z> AptosMoveExecutor<EM, Z> {
     }
 
     fn to_signed_transaction(input: TransactionPayload) -> SignedTransaction {
-        todo!()
+        static TXN_AUTH: OnceLock<TransactionAuthenticator> = OnceLock::new();
+        let txn_auth = TXN_AUTH
+            .get_or_init(|| {
+                let zero_pk = Ed25519PublicKey::try_from(&[0u8; ED25519_PUBLIC_KEY_LENGTH][..])
+                    .expect("valid zero ed25519 pubkey bytes");
+                let zero_sig = Ed25519Signature::try_from(&[0u8; ED25519_SIGNATURE_LENGTH][..])
+                    .expect("valid zero ed25519 signature bytes");
+                let single =
+                    SingleKeyAuthenticator::new(AnyPublicKey::ed25519(zero_pk), AnySignature::ed25519(zero_sig));
+                let account_auth = AccountAuthenticator::single_key(single);
+                TransactionAuthenticator::single_sender(account_auth)
+            })
+            .clone();
+
+        // Minimal RawTransaction: only payload varies per call.
+        let raw_txn = RawTransaction::new(
+            AccountAddress::ZERO,
+            0,
+            input,
+            1_000_000,
+            1,
+            u32::MAX as u64,
+            ChainId::test(),
+        );
+
+        SignedTransaction::new_signed_transaction(raw_txn, txn_auth)
     }
 
     pub fn execute_transaction(
@@ -35,28 +74,105 @@ impl<EM, Z> AptosMoveExecutor<EM, Z> {
         transaction: TransactionPayload,
         state: &AptosCustomState,
     ) -> Result<TransactionResult> {
-        todo!();
-        /*
-        let (vm_status, vm_output) = self.vm.execute_user_transaction(
-            state,
-            state,
-            &Self::to_signed_transaction(transaction),
-            &AdapterLogSchema::new(state.id(), 0),
-            &aptos_types::transaction::AuxiliaryInfo::new(aptos_types::transaction::PersistedAuxiliaryInfo::None, None),
-        );
+        match &transaction {
+            TransactionPayload::EntryFunction(entry) => {
+                let mut session = self.aptos_vm.new_session(state, SessionId::void(), None);
 
-        let txn_output = vm_output
-            .try_materialize_into_transaction_output(state)
-            .expect("Materializing aggregator deltas should not fail");
+                let module_id = entry.module().clone();
+                let func_name: &IdentStr = entry.function();
+                let ty_args: Vec<TypeTag> = entry.ty_args().to_vec();
+                let args: Vec<&[u8]> = entry.args().iter().map(|v| v.as_slice()).collect();
 
-        Ok(TransactionResult {
-            status: txn_output.status().clone(),
-            gas_used: txn_output.gas_used(),
-            write_set: txn_output.write_set().clone(),
-            events: txn_output.events().to_vec(),
-            fee_statement: txn_output.try_extract_fee_statement().ok().flatten(),
-        })
-        */
+                let mut gas = UnmeteredGasMeter;
+                let storage = aptos_move_vm_runtime::module_traversal::TraversalStorage::new();
+                let mut traversal = aptos_move_vm_runtime::module_traversal::TraversalContext::new(&storage);
+
+                let _ret: SerializedReturnValues = session
+                    .execute_function_bypass_visibility(
+                        &module_id,
+                        func_name,
+                        ty_args,
+                        args,
+                        &mut gas,
+                        &mut traversal,
+                        state,
+                    )
+                    .map_err(|e| anyhow::anyhow!("session execute failed: {e:?}"))?;
+
+                let change_set = session
+                    .finish(&ChangeSetConfigs::unlimited_at_gas_feature_version(0), state)
+                    .map_err(|e| anyhow::anyhow!("session finish failed: {e:?}"))?;
+                let storage_change_set = change_set
+                    .try_combine_into_storage_change_set(ModuleWriteSet::empty())
+                    .map_err(|e| anyhow::anyhow!("convert change set failed: {e:?}"))?;
+                let write_set = storage_change_set.write_set().clone();
+                let events = storage_change_set.events().to_vec();
+
+                Ok(TransactionResult {
+                    status: aptos_types::transaction::TransactionStatus::Keep(
+                        aptos_types::vm_status::KeptVMStatus::Executed.into(),
+                    ),
+                    gas_used: 0,
+                    write_set,
+                    events,
+                    fee_statement: None,
+                })
+            }
+            TransactionPayload::Script(script) => {
+                // Low-level MoveVM path: load and execute script without txn
+                // validation/gas/nonce/signature.
+                let (code, ty_args, txn_args) = script.clone().into_inner();
+
+                let move_values: Vec<MoveValue> = txn_args.into_iter().map(MoveValue::from).collect();
+                let args: Vec<Vec<u8>> = value::serialize_values(&move_values);
+
+                let mut session = self.aptos_vm.new_session(state, SessionId::void(), None);
+
+                let mut gas = UnmeteredGasMeter;
+                let storage = aptos_move_vm_runtime::module_traversal::TraversalStorage::new();
+                let mut traversal = aptos_move_vm_runtime::module_traversal::TraversalContext::new(&storage);
+
+                aptos_move_vm_runtime::dispatch_loader!(state, loader, {
+                    let function = loader
+                        .load_script(
+                            &LegacyLoaderConfig::unmetered(),
+                            &mut gas,
+                            &mut traversal,
+                            &code,
+                            &ty_args,
+                        )
+                        .map_err(|e| anyhow::anyhow!("load_script failed: {e:?}"))?;
+
+                    session
+                        .execute_loaded_function(function, args, &mut gas, &mut traversal, &loader)
+                        .map_err(|e| anyhow::anyhow!("script execute failed: {e:?}"))?;
+                });
+
+                // Finish and convert to storage change set.
+                let change_set = session
+                    .finish(&ChangeSetConfigs::unlimited_at_gas_feature_version(0), state)
+                    .map_err(|e| anyhow::anyhow!("session finish failed: {e:?}"))?;
+                let storage_change_set = change_set
+                    .try_combine_into_storage_change_set(ModuleWriteSet::empty())
+                    .map_err(|e| anyhow::anyhow!("convert change set failed: {e:?}"))?;
+
+                let write_set = storage_change_set.write_set().clone();
+                let events = storage_change_set.events().to_vec();
+
+                Ok(TransactionResult {
+                    status: aptos_types::transaction::TransactionStatus::Keep(
+                        aptos_types::vm_status::KeptVMStatus::Executed.into(),
+                    ),
+                    gas_used: 0,
+                    write_set,
+                    events,
+                    fee_statement: None,
+                })
+            }
+            _ => {
+                anyhow::bail!("Unsupported payload type for this executor")
+            }
+        }
     }
 }
 

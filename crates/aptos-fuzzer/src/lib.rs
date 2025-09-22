@@ -1,7 +1,7 @@
+pub mod executor;
 pub mod input;
 pub mod mutator;
 pub mod state;
-pub mod executor;
 
 pub use executor::aptos_move_executor::AptosMoveExecutor;
 pub use input::AptosFuzzerInput;
