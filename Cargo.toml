@@ -3,16 +3,14 @@
 resolver = "2"
 members = [
     # "bin/fuzzer",
+    "bin/libafl-aptos",
 
-
-    "crates/executor",
-    "crates/fuzzer-core",
-
+    # "crates/fuzzer-core",
     # "crates/sui-tracer",
     # "crates/sui-fuzzer",
     # "crates/sui-simulator",
 
-    "crates/aptos-executor",
+    "crates/aptos-fuzzer",
 ]
 
 [workspace.package]
@@ -20,7 +18,10 @@ edition = "2021"
 version = "0.1.0"
 
 [workspace.dependencies]
-executor = { path = "crates/executor" }
+aptos-fuzzer = { path = "crates/aptos-fuzzer" }
+
+libafl = { version = "0.15.3" }
+libafl_bolts = { version = "0.15.3" }
 
 async-trait = "0.1"
 anyhow = "1.0"
@@ -37,7 +38,6 @@ eyre = "0.6"
 thiserror = "2.0"
 hex = "0.4"
 dashmap = "6.1.0"
-
 ### For remote development
 
 # Sui Specific dependencies
