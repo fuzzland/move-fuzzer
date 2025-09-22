@@ -43,6 +43,8 @@ pub struct AptosFuzzerState {
     /// or at the beginning of the next fuzzing iteration
     stop_requested: bool,
     stage_stack: StageStack,
+
+    /// Aptos specific fields
     aptos_state: AptosCustomState,
 }
 
