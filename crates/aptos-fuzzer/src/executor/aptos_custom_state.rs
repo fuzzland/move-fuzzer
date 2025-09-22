@@ -300,7 +300,6 @@ impl AptosModuleStorage for AptosCustomState {
         address: &AccountAddress,
         module_name: &IdentStr,
     ) -> PartialVMResult<Option<StateValueMetadata>> {
-        let module_id = ModuleId::new(*address, module_name.to_owned());
         let state_key = StateKey::module(address, module_name);
 
         match self.kv_state.get(&state_key) {
@@ -388,8 +387,8 @@ impl ModuleStorage for AptosCustomState {
     #[doc = " Note 2: this API is used before lazy loading was enabled!"]
     fn unmetered_get_eagerly_verified_module(
         &self,
-        address: &AccountAddress,
-        module_name: &IdentStr,
+        _address: &AccountAddress,
+        _module_name: &IdentStr,
     ) -> VMResult<Option<Arc<Module>>> {
         // No caching/verification here; upstream handles verification.
         Ok(None)
