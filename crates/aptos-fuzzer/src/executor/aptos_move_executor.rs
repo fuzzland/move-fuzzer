@@ -1,9 +1,15 @@
 use std::marker::PhantomData;
 
 use anyhow::Result;
+use aptos_types::state_store::state_key::StateKey;
+use aptos_types::state_store::state_value::StateValue;
 use aptos_types::transaction::{SignedTransaction, TransactionPayload};
+use aptos_types::chain_id::ChainId;
+use aptos_types::transaction::RawTransaction;
+use aptos_crypto::ed25519::{Ed25519PrivateKey, Ed25519PublicKey, ED25519_PRIVATE_KEY_LENGTH};
+use aptos_crypto::traits::{SigningKey, PrivateKey};
+use aptos_types::account_address;
 use aptos_vm::AptosVM;
-use aptos_vm_environment::environment::AptosEnvironment;
 use aptos_vm_logging::log_schema::AdapterLogSchema;
 use libafl::executors::{Executor, ExitKind, HasObservers};
 use libafl_bolts::tuples::RefIndexable;
@@ -27,7 +33,32 @@ impl<EM, Z> AptosMoveExecutor<EM, Z> {
     }
 
     fn to_signed_transaction(input: TransactionPayload) -> SignedTransaction {
-        todo!()
+        // Deterministic test key: use a trivial numeric seed to form a private key.
+        let mut sk_bytes = [0u8; ED25519_PRIVATE_KEY_LENGTH];
+        sk_bytes[ED25519_PRIVATE_KEY_LENGTH - 1] = 1;
+        let privkey: Ed25519PrivateKey =
+            Ed25519PrivateKey::try_from(sk_bytes.as_slice()).expect("valid ed25519 private key bytes");
+        let pubkey: Ed25519PublicKey = privkey.public_key();
+
+        let sender = account_address::from_public_key(&pubkey);
+        let sequence_number = 0u64;
+        let max_gas_amount = 1_000_000u64;
+        let gas_unit_price = 1u64;
+        let expiration_timestamp_secs = u32::MAX as u64;
+        let chain_id = ChainId::test();
+
+        let raw_txn = RawTransaction::new(
+            sender,
+            sequence_number,
+            input,
+            max_gas_amount,
+            gas_unit_price,
+            expiration_timestamp_secs,
+            chain_id,
+        );
+
+        let signature = privkey.sign(&raw_txn).expect("signing must succeed");
+        SignedTransaction::new(raw_txn, pubkey, signature)
     }
 
     pub fn execute_transaction(
@@ -35,9 +66,7 @@ impl<EM, Z> AptosMoveExecutor<EM, Z> {
         transaction: TransactionPayload,
         state: &AptosCustomState,
     ) -> Result<TransactionResult> {
-        todo!();
-        /*
-        let (vm_status, vm_output) = self.vm.execute_user_transaction(
+        let (vm_status, vm_output) = self.aptos_vm.execute_user_transaction(
             state,
             state,
             &Self::to_signed_transaction(transaction),
@@ -47,7 +76,7 @@ impl<EM, Z> AptosMoveExecutor<EM, Z> {
 
         let txn_output = vm_output
             .try_materialize_into_transaction_output(state)
-            .expect("Materializing aggregator deltas should not fail");
+            .map_err(|e| anyhow::anyhow!("materialize failed: {e:?}; vm_status: {vm_status:?}"))?;
 
         Ok(TransactionResult {
             status: txn_output.status().clone(),
@@ -56,7 +85,6 @@ impl<EM, Z> AptosMoveExecutor<EM, Z> {
             events: txn_output.events().to_vec(),
             fee_statement: txn_output.try_extract_fee_statement().ok().flatten(),
         })
-        */
     }
 }
 

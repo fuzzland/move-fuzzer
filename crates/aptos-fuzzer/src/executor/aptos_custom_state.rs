@@ -20,10 +20,12 @@ use aptos_move_vm_types::resolver::ResourceResolver;
 use aptos_types::error::{PanicError, PanicOr};
 use aptos_types::on_chain_config::ConfigStorage;
 use aptos_types::state_store::errors::StateViewError;
+use aptos_types::state_store::state_key::inner::StateKeyInner;
 use aptos_types::state_store::state_key::StateKey;
 use aptos_types::state_store::state_storage_usage::StateStorageUsage;
 use aptos_types::state_store::state_value::{StateValue, StateValueMetadata};
 use aptos_types::state_store::StateViewId;
+use aptos_types::write_set::{TransactionWrite, WriteSet};
 use aptos_vm::move_vm_ext::{AptosMoveResolver, AsExecutorView, AsResourceGroupView, ResourceGroupResolver};
 use aptos_vm_types::module_and_script_storage::module_storage::AptosModuleStorage;
 use aptos_vm_types::resolver::{
@@ -62,7 +64,8 @@ impl TAggregatorV1View for AptosCustomState {
     }
 }
 
-// Do we need to implement this?
+// Delayed fields unused in this executor; fail fast to surface accidental
+// usage.
 impl TDelayedFieldView for AptosCustomState {
     type Identifier = DelayedFieldID;
     type ResourceKey = StateKey;
@@ -121,28 +124,39 @@ impl ResourceResolver for AptosCustomState {
         &self,
         address: &AccountAddress,
         struct_tag: &StructTag,
-        metadata: &[Metadata],
-        layout: Option<&MoveTypeLayout>,
+        _metadata: &[Metadata],
+        _layout: Option<&MoveTypeLayout>,
     ) -> PartialVMResult<(Option<Bytes>, usize)> {
-        todo!()
+        let state_key = StateKey::resource(address, struct_tag).map_err(|_| unknown_status!())?;
+
+        match self.kv_state.get(&state_key) {
+            Some(state_value) => {
+                let bytes = state_value.bytes();
+                let size = bytes.len();
+                Ok((Some(bytes.clone()), size))
+            }
+            None => Ok((None, 0)),
+        }
     }
 }
 
+// Simple resolver; delegates to group view; no internal caching.
 impl ResourceGroupResolver for AptosCustomState {
     fn release_resource_group_cache(&self) -> Option<HashMap<StateKey, BTreeMap<StructTag, Bytes>>> {
-        todo!()
+        // Return empty: no internal cache
+        Some(HashMap::new())
     }
 
     fn resource_group_size(&self, group_key: &StateKey) -> PartialVMResult<ResourceGroupSize> {
-        todo!()
+        <Self as TResourceGroupView>::resource_group_size(self, group_key)
     }
 
     fn resource_size_in_group(&self, group_key: &StateKey, resource_tag: &StructTag) -> PartialVMResult<usize> {
-        todo!()
+        <Self as TResourceGroupView>::resource_size_in_group(self, group_key, resource_tag)
     }
 
     fn resource_exists_in_group(&self, group_key: &StateKey, resource_tag: &StructTag) -> PartialVMResult<bool> {
-        todo!()
+        <Self as TResourceGroupView>::resource_exists_in_group(self, group_key, resource_tag)
     }
 }
 
@@ -170,9 +184,13 @@ impl TableResolver for AptosCustomState {
         &self,
         handle: &TableHandle,
         key: &[u8],
-        maybe_layout: Option<&MoveTypeLayout>,
+        _maybe_layout: Option<&MoveTypeLayout>,
     ) -> Result<Option<Bytes>, PartialVMError> {
-        todo!()
+        let table_key = (*handle, key.to_vec());
+        match self.tables.get(&table_key) {
+            Some(bytes) => Ok(Some(bytes.clone())),
+            None => Ok(None),
+        }
     }
 }
 
@@ -189,21 +207,30 @@ impl TResourceView for AptosCustomState {
     fn get_resource_state_value(
         &self,
         state_key: &StateKey,
-        maybe_layout: Option<&MoveTypeLayout>,
+        _maybe_layout: Option<&MoveTypeLayout>,
     ) -> PartialVMResult<Option<StateValue>> {
-        todo!()
+        match self.kv_state.get(state_key) {
+            Some(state_value) => Ok(Some(state_value.clone())),
+            None => Ok(None),
+        }
     }
 
     fn get_resource_state_value_metadata(&self, state_key: &StateKey) -> PartialVMResult<Option<StateValueMetadata>> {
-        todo!()
+        match self.kv_state.get(state_key) {
+            Some(state_value) => Ok(Some(state_value.metadata().clone())),
+            None => Ok(None),
+        }
     }
 
     fn get_resource_state_value_size(&self, state_key: &StateKey) -> PartialVMResult<u64> {
-        todo!()
+        match self.kv_state.get(state_key) {
+            Some(state_value) => Ok(state_value.bytes().len() as u64),
+            None => Ok(0),
+        }
     }
 
     fn resource_exists(&self, state_key: &StateKey) -> PartialVMResult<bool> {
-        todo!()
+        Ok(self.kv_state.contains_key(state_key))
     }
 }
 
@@ -213,34 +240,57 @@ impl AsResourceGroupView for AptosCustomState {
     }
 }
 
+// Group value is a BCS-encoded BTreeMap<StructTag, Bytes> under the group key.
 impl TResourceGroupView for AptosCustomState {
     type GroupKey = StateKey;
     type ResourceTag = StructTag;
     type Layout = MoveTypeLayout;
 
     fn resource_group_size(&self, group_key: &StateKey) -> PartialVMResult<ResourceGroupSize> {
-        todo!()
+        match self.kv_state.get(group_key) {
+            Some(state_value) => Ok(ResourceGroupSize::Concrete(state_value.bytes().len() as u64)),
+            None => Ok(ResourceGroupSize::Concrete(0)),
+        }
     }
 
     fn get_resource_from_group(
         &self,
         group_key: &StateKey,
         resource_tag: &StructTag,
-        maybe_layout: Option<&MoveTypeLayout>,
+        _maybe_layout: Option<&MoveTypeLayout>,
     ) -> PartialVMResult<Option<Bytes>> {
-        todo!()
+        let maybe_bytes = self.kv_state.get(group_key).map(|sv| sv.bytes().clone());
+        if let Some(blob) = maybe_bytes {
+            let map: BTreeMap<StructTag, Bytes> = bcs::from_bytes(&blob).map_err(|_| unknown_status!())?;
+            Ok(map.get(resource_tag).cloned())
+        } else {
+            Ok(None)
+        }
     }
 
     fn resource_size_in_group(&self, group_key: &StateKey, resource_tag: &StructTag) -> PartialVMResult<usize> {
-        todo!()
+        let maybe_bytes = self.kv_state.get(group_key).map(|sv| sv.bytes().clone());
+        if let Some(blob) = maybe_bytes {
+            let map: BTreeMap<StructTag, Bytes> = bcs::from_bytes(&blob).map_err(|_| unknown_status!())?;
+            Ok(map.get(resource_tag).map_or(0, |v| v.len()))
+        } else {
+            Ok(0)
+        }
     }
 
     fn resource_exists_in_group(&self, group_key: &StateKey, resource_tag: &StructTag) -> PartialVMResult<bool> {
-        todo!()
+        let maybe_bytes = self.kv_state.get(group_key).map(|sv| sv.bytes().clone());
+        if let Some(blob) = maybe_bytes {
+            let map: BTreeMap<StructTag, Bytes> = bcs::from_bytes(&blob).map_err(|_| unknown_status!())?;
+            Ok(map.contains_key(resource_tag))
+        } else {
+            Ok(false)
+        }
     }
 
     fn release_group_cache(&self) -> Option<HashMap<StateKey, BTreeMap<StructTag, Bytes>>> {
-        todo!()
+        // Return empty: no caching
+        Some(HashMap::new())
     }
 }
 
@@ -250,7 +300,13 @@ impl AptosModuleStorage for AptosCustomState {
         address: &AccountAddress,
         module_name: &IdentStr,
     ) -> PartialVMResult<Option<StateValueMetadata>> {
-        todo!()
+        let module_id = ModuleId::new(*address, module_name.to_owned());
+        let state_key = StateKey::module(address, module_name);
+
+        match self.kv_state.get(&state_key) {
+            Some(state_value) => Ok(Some(state_value.metadata().clone())),
+            None => Ok(None),
+        }
     }
 }
 
@@ -260,7 +316,8 @@ impl ModuleStorage for AptosCustomState {
     #[doc = ""]
     #[doc = " Note: this API is not metered!"]
     fn unmetered_check_module_exists(&self, address: &AccountAddress, module_name: &IdentStr) -> VMResult<bool> {
-        todo!()
+        let module_id = ModuleId::new(*address, module_name.to_owned());
+        Ok(self.modules.contains_key(&module_id))
     }
 
     #[doc = " Returns module bytes if module exists, or [None] otherwise. An error is returned if there"]
@@ -268,7 +325,8 @@ impl ModuleStorage for AptosCustomState {
     #[doc = ""]
     #[doc = " Note: this API is not metered!"]
     fn unmetered_get_module_bytes(&self, address: &AccountAddress, module_name: &IdentStr) -> VMResult<Option<Bytes>> {
-        todo!()
+        let module_id = ModuleId::new(*address, module_name.to_owned());
+        Ok(self.modules.get(&module_id).cloned())
     }
 
     #[doc = " Returns the size of a module in bytes, or [None] otherwise. An error is returned if the"]
@@ -277,7 +335,8 @@ impl ModuleStorage for AptosCustomState {
     #[doc = " Note: this API is not metered! It is only used to get the size of a module so that metering"]
     #[doc = " can actually be implemented before loading a module."]
     fn unmetered_get_module_size(&self, address: &AccountAddress, module_name: &IdentStr) -> VMResult<Option<usize>> {
-        todo!()
+        let module_id = ModuleId::new(*address, module_name.to_owned());
+        Ok(self.modules.get(&module_id).map(|bytes| bytes.len()))
     }
 
     #[doc = " Returns the metadata in the module, or [None] otherwise. An error is returned if there is"]
@@ -289,7 +348,14 @@ impl ModuleStorage for AptosCustomState {
         address: &AccountAddress,
         module_name: &IdentStr,
     ) -> VMResult<Option<Vec<Metadata>>> {
-        todo!()
+        let module_id = ModuleId::new(*address, module_name.to_owned());
+        match self.modules.get(&module_id) {
+            Some(bytes) => match CompiledModule::deserialize(bytes) {
+                Ok(module) => Ok(Some(module.metadata)),
+                Err(_) => Ok(None),
+            },
+            None => Ok(None),
+        }
     }
 
     #[doc = " Returns the deserialized module, or [None] otherwise. An error is returned if:"]
@@ -302,7 +368,14 @@ impl ModuleStorage for AptosCustomState {
         address: &AccountAddress,
         module_name: &IdentStr,
     ) -> VMResult<Option<Arc<CompiledModule>>> {
-        todo!()
+        let module_id = ModuleId::new(*address, module_name.to_owned());
+        match self.modules.get(&module_id) {
+            Some(bytes) => match CompiledModule::deserialize(bytes) {
+                Ok(module) => Ok(Some(Arc::new(module))),
+                Err(_) => Ok(None),
+            },
+            None => Ok(None),
+        }
     }
 
     #[doc = " Returns the verified module if it exists, or [None] otherwise. The existing module can be"]
@@ -318,7 +391,8 @@ impl ModuleStorage for AptosCustomState {
         address: &AccountAddress,
         module_name: &IdentStr,
     ) -> VMResult<Option<Arc<Module>>> {
-        todo!()
+        // No caching/verification here; upstream handles verification.
+        Ok(None)
     }
 
     #[doc = " Returns the verified module if it exists, or [None] otherwise. The existing module can be"]
@@ -329,13 +403,12 @@ impl ModuleStorage for AptosCustomState {
     #[doc = " Note 1: this API is not metered!"]
     #[doc = " Note 2: this API is used after lazy loading was enabled!"]
     fn unmetered_get_lazily_verified_module(&self, module_id: &ModuleId) -> VMResult<Option<Arc<Module>>> {
-        todo!()
+        // No lazy verification; return None.
+        Ok(None)
     }
 }
 
-// TODO: find out the role of script in Aptos
-// in sui scripts are deprecated
-// decide do we need it and how will it be used (for fuzzing)
+// TODO: Clarify script role in Aptos; decide fuzzing relevance.
 impl ScriptCache for AptosCustomState {
     type Key = [u8; 32];
     type Deserialized = CompiledScript;
@@ -382,7 +455,7 @@ impl ScriptCache for AptosCustomState {
 }
 
 impl BlockSynchronizationKillSwitch for AptosCustomState {
-    // cannot be interrupted
+    // Cannot be interrupted
     fn interrupt_requested(&self) -> bool {
         false
     }
@@ -394,29 +467,93 @@ impl WithRuntimeEnvironment for AptosCustomState {
     }
 }
 
+impl Default for AptosCustomState {
+    fn default() -> Self {
+        Self::new_default()
+    }
+}
+
 impl std::fmt::Debug for AptosCustomState {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        todo!("implement")
+        f.debug_struct("AptosCustomState")
+            .field("kv_state_len", &self.kv_state.len())
+            .field("tables_len", &self.tables.len())
+            .field("modules_len", &self.modules.len())
+            .field("scripts_deser_len", &self.scripts_deser.len())
+            .field("scripts_verified_len", &self.scripts_verified.len())
+            .finish()
     }
 }
 
 impl AptosCustomState {
     pub fn new_default() -> Self {
-        todo!("implement")
-    }
-
-    pub fn new_stub() -> Self {
         Self {
-            runtime_environment: RuntimeEnvironment::new(vec![]),
             kv_state: HashMap::new(),
             tables: HashMap::new(),
             modules: HashMap::new(),
             scripts_deser: DashMap::new(),
             scripts_verified: DashMap::new(),
+            runtime_environment: RuntimeEnvironment::new(vec![]),
         }
     }
 
     pub fn id(&self) -> StateViewId {
         StateViewId::Miscellaneous
+    }
+
+    pub fn get_state_value(&self, state_key: &StateKey) -> Option<StateValue> {
+        self.kv_state.get(state_key).cloned()
+    }
+
+    // Apply WriteSet to in-memory state; mirror modules from code access paths.
+    pub fn apply_write_set(&mut self, write_set: &WriteSet) {
+        for (state_key, write_op) in write_set.write_op_iter() {
+            match state_key.inner() {
+                StateKeyInner::TableItem { handle, key } => {
+                    let table_handle = TableHandle(handle.0);
+                    match write_op.bytes() {
+                        Some(bytes) => {
+                            self.tables.insert((table_handle, key.clone()), bytes.clone());
+                        }
+                        None => {
+                            self.tables.remove(&(table_handle, key.clone()));
+                        }
+                    }
+                }
+                StateKeyInner::AccessPath(access_path) => {
+                    // Always update kv_state
+                    match write_op.as_state_value() {
+                        Some(state_value) => {
+                            self.kv_state.insert(state_key.clone(), state_value);
+                        }
+                        None => {
+                            self.kv_state.remove(state_key);
+                        }
+                    }
+
+                    // If module code, also maintain modules cache
+                    if access_path.is_code() {
+                        if let Some(module_id) = access_path.try_get_module_id() {
+                            match write_op.bytes() {
+                                Some(bytes) => {
+                                    self.modules.insert(module_id, bytes.clone());
+                                }
+                                None => {
+                                    self.modules.remove(&module_id);
+                                }
+                            }
+                        }
+                    }
+                }
+                StateKeyInner::Raw(_) => match write_op.as_state_value() {
+                    Some(state_value) => {
+                        self.kv_state.insert(state_key.clone(), state_value);
+                    }
+                    None => {
+                        self.kv_state.remove(state_key);
+                    }
+                },
+            }
+        }
     }
 }
