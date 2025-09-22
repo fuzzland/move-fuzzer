@@ -1,0 +1,3 @@
+[submodule "external/aptos-core"]
+	path = external/aptos-core
+	url = git@github.com:fuzzland/aptos-core.git

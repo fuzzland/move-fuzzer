@@ -4,9 +4,9 @@ use std::sync::Arc;
 use aptos_aggregator::bounded_math::SignedU128;
 use aptos_aggregator::resolver::{TAggregatorV1View, TDelayedFieldView};
 use aptos_aggregator::types::{DelayedFieldValue, DelayedFieldsSpeculativeError};
-use aptos_move_binary_format::CompiledModule;
 use aptos_move_binary_format::errors::{PartialVMError, PartialVMResult, VMResult};
 use aptos_move_binary_format::file_format::CompiledScript;
+use aptos_move_binary_format::CompiledModule;
 use aptos_move_core_types::account_address::AccountAddress;
 use aptos_move_core_types::identifier::IdentStr;
 use aptos_move_core_types::language_storage::{ModuleId, StructTag};
@@ -19,11 +19,11 @@ use aptos_move_vm_types::delayed_values::delayed_field_id::DelayedFieldID;
 use aptos_move_vm_types::resolver::ResourceResolver;
 use aptos_types::error::{PanicError, PanicOr};
 use aptos_types::on_chain_config::ConfigStorage;
-use aptos_types::state_store::StateViewId;
 use aptos_types::state_store::errors::StateViewError;
 use aptos_types::state_store::state_key::StateKey;
 use aptos_types::state_store::state_storage_usage::StateStorageUsage;
 use aptos_types::state_store::state_value::{StateValue, StateValueMetadata};
+use aptos_types::state_store::StateViewId;
 use aptos_vm::move_vm_ext::{AptosMoveResolver, AsExecutorView, AsResourceGroupView, ResourceGroupResolver};
 use aptos_vm_types::module_and_script_storage::module_storage::AptosModuleStorage;
 use aptos_vm_types::resolver::{
@@ -394,12 +394,6 @@ impl WithRuntimeEnvironment for AptosCustomState {
     }
 }
 
-impl Default for AptosCustomState {
-    fn default() -> Self {
-        Self::new_default()
-    }
-}
-
 impl std::fmt::Debug for AptosCustomState {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         todo!("implement")
@@ -409,6 +403,17 @@ impl std::fmt::Debug for AptosCustomState {
 impl AptosCustomState {
     pub fn new_default() -> Self {
         todo!("implement")
+    }
+
+    pub fn new_stub() -> Self {
+        Self {
+            runtime_environment: RuntimeEnvironment::new(vec![]),
+            kv_state: HashMap::new(),
+            tables: HashMap::new(),
+            modules: HashMap::new(),
+            scripts_deser: DashMap::new(),
+            scripts_verified: DashMap::new(),
+        }
     }
 
     pub fn id(&self) -> StateViewId {

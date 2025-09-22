@@ -50,10 +50,29 @@ pub struct AptosFuzzerState {
 
 impl AptosFuzzerState {
     pub fn new() -> Self {
-        Self {
-            aptos_state: AptosCustomState::new_default(),
-            ..Default::default()
-        }
+        let state = Self {
+            // TODO: replace me with actual aptos state
+            aptos_state: AptosCustomState::new_stub(),
+
+            rand: StdRand::new(),
+            executions: 0,
+            start_time: Duration::from_secs(0),
+            imported: 0,
+            corpus: InMemoryCorpus::new(),
+            solutions: InMemoryCorpus::new(),
+            metadata: SerdeAnyMap::new(),
+            named_metadata: NamedSerdeAnyMap::new(),
+            last_found_time: Duration::from_secs(0),
+            last_report_time: None,
+            corpus_id: None,
+            stop_requested: false,
+            stage_stack: StageStack::default(),
+        };
+
+        // TODO: deploy code (toml/json?)
+        // TODO: init corpus w/ static analysis and abi.json
+
+        state
     }
 
     pub fn aptos_state(&self) -> &AptosCustomState {

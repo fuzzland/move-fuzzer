@@ -3,6 +3,7 @@ use std::marker::PhantomData;
 use anyhow::Result;
 use aptos_types::transaction::{SignedTransaction, TransactionPayload};
 use aptos_vm::AptosVM;
+use aptos_vm_environment::environment::AptosEnvironment;
 use aptos_vm_logging::log_schema::AdapterLogSchema;
 use libafl::executors::{Executor, ExitKind, HasObservers};
 use libafl_bolts::tuples::RefIndexable;
@@ -12,14 +13,17 @@ use super::types::TransactionResult;
 use crate::{AptosFuzzerInput, AptosFuzzerState};
 
 pub struct AptosMoveExecutor<EM, Z> {
-    vm: AptosVM,
-
+    aptos_vm: AptosVM,
     _phantom: PhantomData<(EM, Z)>,
 }
 
 impl<EM, Z> AptosMoveExecutor<EM, Z> {
     pub fn new() -> Self {
-        todo!()
+        let env = todo!("initialize aptos environment");
+        Self {
+            aptos_vm: AptosVM::new_fuzzer(&env),
+            _phantom: PhantomData,
+        }
     }
 
     fn to_signed_transaction(input: TransactionPayload) -> SignedTransaction {
@@ -31,6 +35,8 @@ impl<EM, Z> AptosMoveExecutor<EM, Z> {
         transaction: TransactionPayload,
         state: &AptosCustomState,
     ) -> Result<TransactionResult> {
+        todo!();
+        /*
         let (vm_status, vm_output) = self.vm.execute_user_transaction(
             state,
             state,
@@ -50,6 +56,7 @@ impl<EM, Z> AptosMoveExecutor<EM, Z> {
             events: txn_output.events().to_vec(),
             fee_statement: txn_output.try_extract_fee_statement().ok().flatten(),
         })
+        */
     }
 }
 

@@ -13,6 +13,8 @@ members = [
     "crates/aptos-fuzzer",
 ]
 
+exclude = ["external/aptos-core"]
+
 [workspace.package]
 edition = "2021"
 version = "0.1.0"
@@ -88,23 +90,41 @@ sui-move-vm-runtime = { package = "move-vm-runtime", git = "https://github.com/f
 schemars = "1.0"
 
 # Aptos Specific dependencies
-aptos-config = { git = "https://github.com/fuzzland/aptos-core", rev = "1e5097063214a84f794ed2373f66a9d325bf6ca4" }
-aptos-db = { git = "https://github.com/fuzzland/aptos-core", rev = "1e5097063214a84f794ed2373f66a9d325bf6ca4" }
-aptos-executor = { git = "https://github.com/fuzzland/aptos-core", rev = "1e5097063214a84f794ed2373f66a9d325bf6ca4" }
-aptos-storage-interface = { git = "https://github.com/fuzzland/aptos-core", rev = "1e5097063214a84f794ed2373f66a9d325bf6ca4" }
-aptos-types = { git = "https://github.com/fuzzland/aptos-core", rev = "1e5097063214a84f794ed2373f66a9d325bf6ca4" }
-aptos-vm = { git = "https://github.com/fuzzland/aptos-core", rev = "1e5097063214a84f794ed2373f66a9d325bf6ca4" }
-aptos-vm-genesis = { git = "https://github.com/fuzzland/aptos-core", rev = "1e5097063214a84f794ed2373f66a9d325bf6ca4" }
-aptos-vm-environment = { git = "https://github.com/fuzzland/aptos-core", rev = "1e5097063214a84f794ed2373f66a9d325bf6ca4" }
-aptos-vm-logging = { git = "https://github.com/fuzzland/aptos-core", rev = "1e5097063214a84f794ed2373f66a9d325bf6ca4" }
-aptos-vm-types = { git = "https://github.com/fuzzland/aptos-core", rev = "1e5097063214a84f794ed2373f66a9d325bf6ca4" }
-aptos-aggregator = { git = "https://github.com/fuzzland/aptos-core", rev = "1e5097063214a84f794ed2373f66a9d325bf6ca4" }
-aptos-move-table-extension = { package = "move-table-extension", git = "https://github.com/fuzzland/aptos-core", rev = "1e5097063214a84f794ed2373f66a9d325bf6ca4" }
-aptos-move-core-types = { package = "move-core-types", git = "https://github.com/fuzzland/aptos-core", rev = "1e5097063214a84f794ed2373f66a9d325bf6ca4" }
-aptos-move-binary-format = { package = "move-binary-format", git = "https://github.com/fuzzland/aptos-core", rev = "1e5097063214a84f794ed2373f66a9d325bf6ca4" }
+# aptos-config = { git = "https://github.com/fuzzland/aptos-core", rev = "1e5097063214a84f794ed2373f66a9d325bf6ca4" }
+# aptos-db = { git = "https://github.com/fuzzland/aptos-core", rev = "1e5097063214a84f794ed2373f66a9d325bf6ca4" }
+# aptos-executor = { git = "https://github.com/fuzzland/aptos-core", rev = "1e5097063214a84f794ed2373f66a9d325bf6ca4" }
+# aptos-storage-interface = { git = "https://github.com/fuzzland/aptos-core", rev = "1e5097063214a84f794ed2373f66a9d325bf6ca4" }
+# aptos-types = { git = "https://github.com/fuzzland/aptos-core", rev = "1e5097063214a84f794ed2373f66a9d325bf6ca4" }
+# aptos-vm = { git = "https://github.com/fuzzland/aptos-core", rev = "1e5097063214a84f794ed2373f66a9d325bf6ca4" }
+# aptos-vm-genesis = { git = "https://github.com/fuzzland/aptos-core", rev = "1e5097063214a84f794ed2373f66a9d325bf6ca4" }
+# aptos-vm-environment = { git = "https://github.com/fuzzland/aptos-core", rev = "1e5097063214a84f794ed2373f66a9d325bf6ca4" }
+# aptos-vm-logging = { git = "https://github.com/fuzzland/aptos-core", rev = "1e5097063214a84f794ed2373f66a9d325bf6ca4" }
+# aptos-vm-types = { git = "https://github.com/fuzzland/aptos-core", rev = "1e5097063214a84f794ed2373f66a9d325bf6ca4" }
+# aptos-aggregator = { git = "https://github.com/fuzzland/aptos-core", rev = "1e5097063214a84f794ed2373f66a9d325bf6ca4" }
+# aptos-move-table-extension = { package = "move-table-extension", git = "https://github.com/fuzzland/aptos-core", rev = "1e5097063214a84f794ed2373f66a9d325bf6ca4" }
+# aptos-move-core-types = { package = "move-core-types", git = "https://github.com/fuzzland/aptos-core", rev = "1e5097063214a84f794ed2373f66a9d325bf6ca4" }
+# aptos-move-binary-format = { package = "move-binary-format", git = "https://github.com/fuzzland/aptos-core", rev = "1e5097063214a84f794ed2373f66a9d325bf6ca4" }
+# aptos-move-vm-types = { package = "move-vm-types", git = "https://github.com/fuzzland/aptos-core", rev = "1e5097063214a84f794ed2373f66a9d325bf6ca4" }
+# aptos-move-vm-runtime = { package = "move-vm-runtime", git = "https://github.com/fuzzland/aptos-core", rev = "1e5097063214a84f794ed2373f66a9d325bf6ca4" }
+
+aptos-config = { path = "./external/aptos-core/config" }
+aptos-db = { path = "./external/aptos-core/storage/aptosdb" }
+aptos-executor = { path = "./external/aptos-core/execution/executor" }
+aptos-storage-interface = { path = "./external/aptos-core/storage/storage-interface" }
+aptos-types = { path = "./external/aptos-core/types" }
+aptos-vm = { path = "./external/aptos-core/aptos-move/aptos-vm" }
+aptos-vm-genesis = { path = "./external/aptos-core/aptos-move/vm-genesis" }
+aptos-vm-environment = { path = "./external/aptos-core/aptos-move/aptos-vm-environment" }
+aptos-vm-logging = { path = "./external/aptos-core/aptos-move/aptos-vm-logging" }
+aptos-vm-types = { path = "./external/aptos-core/aptos-move/aptos-vm-types" }
+aptos-aggregator = { path = "./external/aptos-core/aptos-move/aptos-aggregator" }
+aptos-move-table-extension = { package = "move-table-extension", path = "./external/aptos-core/third_party/move/extensions/move-table-extension" }
+aptos-move-core-types = { package = "move-core-types", path = "./external/aptos-core/third_party/move/move-core/types" }
+aptos-move-binary-format = { package = "move-binary-format", path = "./external/aptos-core/third_party/move/move-binary-format" }
+aptos-move-vm-types = { package = "move-vm-types", path = "./external/aptos-core/third_party/move/move-vm/types" }
+aptos-move-vm-runtime = { package = "move-vm-runtime", path = "./external/aptos-core/third_party/move/move-vm/runtime" }
+
 bytes = "=1.10.1"
-aptos-move-vm-types = { package = "move-vm-types", git = "https://github.com/fuzzland/aptos-core", rev = "1e5097063214a84f794ed2373f66a9d325bf6ca4" }
-aptos-move-vm-runtime = { package = "move-vm-runtime", git = "https://github.com/fuzzland/aptos-core", rev = "1e5097063214a84f794ed2373f66a9d325bf6ca4" }
 
 # allow transcript labels to come from non-Rust code
 # https://github.com/aptos-labs/aptos-core/issues/9340

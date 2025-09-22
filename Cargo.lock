@@ -11,7 +11,6 @@ checksum = "fe438c63458706e03479442743baae6c88256498e6431708f6dfc520a26515d3"
 [[package]]
 name = "abstract-domain-derive"
 version = "0.1.0"
-source = "git+https://github.com/fuzzland/aptos-core?rev=1e5097063214a84f794ed2373f66a9d325bf6ca4#1e5097063214a84f794ed2373f66a9d325bf6ca4"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -235,7 +234,6 @@ checksum = "b0674a1ddeecb70197781e945de4b3b8ffb61fa939a5597bcf48503737663100"
 [[package]]
 name = "aptos-accumulator"
 version = "0.1.0"
-source = "git+https://github.com/fuzzland/aptos-core?rev=1e5097063214a84f794ed2373f66a9d325bf6ca4#1e5097063214a84f794ed2373f66a9d325bf6ca4"
 dependencies = [
  "anyhow",
  "aptos-crypto",
@@ -245,7 +243,6 @@ dependencies = [
 [[package]]
 name = "aptos-aggregator"
 version = "0.1.0"
-source = "git+https://github.com/fuzzland/aptos-core?rev=1e5097063214a84f794ed2373f66a9d325bf6ca4#1e5097063214a84f794ed2373f66a9d325bf6ca4"
 dependencies = [
  "aptos-types",
  "bcs 0.1.4",
@@ -258,7 +255,6 @@ dependencies = [
 [[package]]
 name = "aptos-api"
 version = "0.2.0"
-source = "git+https://github.com/fuzzland/aptos-core?rev=1e5097063214a84f794ed2373f66a9d325bf6ca4#1e5097063214a84f794ed2373f66a9d325bf6ca4"
 dependencies = [
  "anyhow",
  "aptos-api-types",
@@ -300,7 +296,6 @@ dependencies = [
 [[package]]
 name = "aptos-api-types"
 version = "0.0.1"
-source = "git+https://github.com/fuzzland/aptos-core?rev=1e5097063214a84f794ed2373f66a9d325bf6ca4#1e5097063214a84f794ed2373f66a9d325bf6ca4"
 dependencies = [
  "anyhow",
  "aptos-config",
@@ -329,7 +324,6 @@ dependencies = [
 [[package]]
 name = "aptos-bcs-utils"
 version = "0.1.0"
-source = "git+https://github.com/fuzzland/aptos-core?rev=1e5097063214a84f794ed2373f66a9d325bf6ca4#1e5097063214a84f794ed2373f66a9d325bf6ca4"
 dependencies = [
  "anyhow",
  "hex",
@@ -338,7 +332,6 @@ dependencies = [
 [[package]]
 name = "aptos-bitvec"
 version = "0.1.0"
-source = "git+https://github.com/fuzzland/aptos-core?rev=1e5097063214a84f794ed2373f66a9d325bf6ca4#1e5097063214a84f794ed2373f66a9d325bf6ca4"
 dependencies = [
  "serde",
  "serde_bytes",
@@ -347,7 +340,6 @@ dependencies = [
 [[package]]
 name = "aptos-block-executor"
 version = "0.1.0"
-source = "git+https://github.com/fuzzland/aptos-core?rev=1e5097063214a84f794ed2373f66a9d325bf6ca4#1e5097063214a84f794ed2373f66a9d325bf6ca4"
 dependencies = [
  "ambassador",
  "anyhow",
@@ -387,7 +379,6 @@ dependencies = [
 [[package]]
 name = "aptos-block-partitioner"
 version = "0.1.0"
-source = "git+https://github.com/fuzzland/aptos-core?rev=1e5097063214a84f794ed2373f66a9d325bf6ca4#1e5097063214a84f794ed2373f66a9d325bf6ca4"
 dependencies = [
  "aptos-crypto",
  "aptos-logger",
@@ -408,7 +399,6 @@ dependencies = [
 [[package]]
 name = "aptos-bounded-executor"
 version = "0.1.0"
-source = "git+https://github.com/fuzzland/aptos-core?rev=1e5097063214a84f794ed2373f66a9d325bf6ca4#1e5097063214a84f794ed2373f66a9d325bf6ca4"
 dependencies = [
  "futures",
  "rustversion",
@@ -418,7 +408,6 @@ dependencies = [
 [[package]]
 name = "aptos-build-info"
 version = "0.1.0"
-source = "git+https://github.com/fuzzland/aptos-core?rev=1e5097063214a84f794ed2373f66a9d325bf6ca4#1e5097063214a84f794ed2373f66a9d325bf6ca4"
 dependencies = [
  "shadow-rs",
 ]
@@ -426,7 +415,6 @@ dependencies = [
 [[package]]
 name = "aptos-cached-packages"
 version = "0.1.0"
-source = "git+https://github.com/fuzzland/aptos-core?rev=1e5097063214a84f794ed2373f66a9d325bf6ca4#1e5097063214a84f794ed2373f66a9d325bf6ca4"
 dependencies = [
  "anyhow",
  "aptos-framework",
@@ -440,7 +428,6 @@ dependencies = [
 [[package]]
 name = "aptos-channels"
 version = "0.1.0"
-source = "git+https://github.com/fuzzland/aptos-core?rev=1e5097063214a84f794ed2373f66a9d325bf6ca4#1e5097063214a84f794ed2373f66a9d325bf6ca4"
 dependencies = [
  "anyhow",
  "aptos-infallible",
@@ -451,7 +438,6 @@ dependencies = [
 [[package]]
 name = "aptos-compression"
 version = "0.1.0"
-source = "git+https://github.com/fuzzland/aptos-core?rev=1e5097063214a84f794ed2373f66a9d325bf6ca4#1e5097063214a84f794ed2373f66a9d325bf6ca4"
 dependencies = [
  "aptos-logger",
  "aptos-metrics-core",
@@ -463,7 +449,6 @@ dependencies = [
 [[package]]
 name = "aptos-config"
 version = "0.1.0"
-source = "git+https://github.com/fuzzland/aptos-core?rev=1e5097063214a84f794ed2373f66a9d325bf6ca4#1e5097063214a84f794ed2373f66a9d325bf6ca4"
 dependencies = [
  "anyhow",
  "aptos-crypto",
@@ -496,7 +481,6 @@ dependencies = [
 [[package]]
 name = "aptos-consensus-types"
 version = "0.1.0"
-source = "git+https://github.com/fuzzland/aptos-core?rev=1e5097063214a84f794ed2373f66a9d325bf6ca4#1e5097063214a84f794ed2373f66a9d325bf6ca4"
 dependencies = [
  "anyhow",
  "aptos-bitvec",
@@ -524,7 +508,6 @@ dependencies = [
 [[package]]
 name = "aptos-crypto"
 version = "0.0.3"
-source = "git+https://github.com/fuzzland/aptos-core?rev=1e5097063214a84f794ed2373f66a9d325bf6ca4#1e5097063214a84f794ed2373f66a9d325bf6ca4"
 dependencies = [
  "aes-gcm",
  "anyhow",
@@ -578,7 +561,6 @@ dependencies = [
 [[package]]
 name = "aptos-crypto-derive"
 version = "0.0.3"
-source = "git+https://github.com/fuzzland/aptos-core?rev=1e5097063214a84f794ed2373f66a9d325bf6ca4#1e5097063214a84f794ed2373f66a9d325bf6ca4"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -588,7 +570,6 @@ dependencies = [
 [[package]]
 name = "aptos-db"
 version = "0.1.0"
-source = "git+https://github.com/fuzzland/aptos-core?rev=1e5097063214a84f794ed2373f66a9d325bf6ca4#1e5097063214a84f794ed2373f66a9d325bf6ca4"
 dependencies = [
  "anyhow",
  "aptos-accumulator",
@@ -630,7 +611,6 @@ dependencies = [
 [[package]]
 name = "aptos-db-indexer"
 version = "0.1.0"
-source = "git+https://github.com/fuzzland/aptos-core?rev=1e5097063214a84f794ed2373f66a9d325bf6ca4#1e5097063214a84f794ed2373f66a9d325bf6ca4"
 dependencies = [
  "anyhow",
  "aptos-config",
@@ -652,7 +632,6 @@ dependencies = [
 [[package]]
 name = "aptos-db-indexer-schemas"
 version = "0.1.0"
-source = "git+https://github.com/fuzzland/aptos-core?rev=1e5097063214a84f794ed2373f66a9d325bf6ca4#1e5097063214a84f794ed2373f66a9d325bf6ca4"
 dependencies = [
  "anyhow",
  "aptos-crypto",
@@ -669,7 +648,6 @@ dependencies = [
 [[package]]
 name = "aptos-dkg"
 version = "0.1.0"
-source = "git+https://github.com/fuzzland/aptos-core?rev=1e5097063214a84f794ed2373f66a9d325bf6ca4#1e5097063214a84f794ed2373f66a9d325bf6ca4"
 dependencies = [
  "anyhow",
  "aptos-crypto",
@@ -701,7 +679,6 @@ dependencies = [
 [[package]]
 name = "aptos-drop-helper"
 version = "0.1.0"
-source = "git+https://github.com/fuzzland/aptos-core?rev=1e5097063214a84f794ed2373f66a9d325bf6ca4#1e5097063214a84f794ed2373f66a9d325bf6ca4"
 dependencies = [
  "aptos-infallible",
  "aptos-metrics-core",
@@ -712,7 +689,6 @@ dependencies = [
 [[package]]
 name = "aptos-event-notifications"
 version = "0.1.0"
-source = "git+https://github.com/fuzzland/aptos-core?rev=1e5097063214a84f794ed2373f66a9d325bf6ca4#1e5097063214a84f794ed2373f66a9d325bf6ca4"
 dependencies = [
  "anyhow",
  "aptos-channels",
@@ -728,7 +704,6 @@ dependencies = [
 [[package]]
 name = "aptos-executor"
 version = "0.1.0"
-source = "git+https://github.com/fuzzland/aptos-core?rev=1e5097063214a84f794ed2373f66a9d325bf6ca4#1e5097063214a84f794ed2373f66a9d325bf6ca4"
 dependencies = [
  "anyhow",
  "aptos-block-executor",
@@ -759,7 +734,6 @@ dependencies = [
 [[package]]
 name = "aptos-executor-service"
 version = "0.1.0"
-source = "git+https://github.com/fuzzland/aptos-core?rev=1e5097063214a84f794ed2373f66a9d325bf6ca4#1e5097063214a84f794ed2373f66a9d325bf6ca4"
 dependencies = [
  "aptos-block-executor",
  "aptos-block-partitioner",
@@ -790,7 +764,6 @@ dependencies = [
 [[package]]
 name = "aptos-executor-types"
 version = "0.1.0"
-source = "git+https://github.com/fuzzland/aptos-core?rev=1e5097063214a84f794ed2373f66a9d325bf6ca4#1e5097063214a84f794ed2373f66a9d325bf6ca4"
 dependencies = [
  "anyhow",
  "aptos-crypto",
@@ -815,7 +788,6 @@ dependencies = [
 [[package]]
 name = "aptos-experimental-layered-map"
 version = "0.1.0"
-source = "git+https://github.com/fuzzland/aptos-core?rev=1e5097063214a84f794ed2373f66a9d325bf6ca4#1e5097063214a84f794ed2373f66a9d325bf6ca4"
 dependencies = [
  "ahash 0.8.12",
  "aptos-crypto",
@@ -831,7 +803,6 @@ dependencies = [
 [[package]]
 name = "aptos-experimental-runtimes"
 version = "0.1.0"
-source = "git+https://github.com/fuzzland/aptos-core?rev=1e5097063214a84f794ed2373f66a9d325bf6ca4#1e5097063214a84f794ed2373f66a9d325bf6ca4"
 dependencies = [
  "aptos-runtimes",
  "core_affinity",
@@ -844,7 +815,6 @@ dependencies = [
 [[package]]
 name = "aptos-framework"
 version = "0.1.0"
-source = "git+https://github.com/fuzzland/aptos-core?rev=1e5097063214a84f794ed2373f66a9d325bf6ca4#1e5097063214a84f794ed2373f66a9d325bf6ca4"
 dependencies = [
  "anyhow",
  "aptos-aggregator",
@@ -943,7 +913,6 @@ dependencies = [
 [[package]]
 name = "aptos-gas-algebra"
 version = "0.0.1"
-source = "git+https://github.com/fuzzland/aptos-core?rev=1e5097063214a84f794ed2373f66a9d325bf6ca4#1e5097063214a84f794ed2373f66a9d325bf6ca4"
 dependencies = [
  "either",
  "move-core-types",
@@ -952,7 +921,6 @@ dependencies = [
 [[package]]
 name = "aptos-gas-meter"
 version = "0.1.0"
-source = "git+https://github.com/fuzzland/aptos-core?rev=1e5097063214a84f794ed2373f66a9d325bf6ca4#1e5097063214a84f794ed2373f66a9d325bf6ca4"
 dependencies = [
  "aptos-gas-algebra",
  "aptos-gas-schedule",
@@ -967,7 +935,6 @@ dependencies = [
 [[package]]
 name = "aptos-gas-schedule"
 version = "0.1.0"
-source = "git+https://github.com/fuzzland/aptos-core?rev=1e5097063214a84f794ed2373f66a9d325bf6ca4#1e5097063214a84f794ed2373f66a9d325bf6ca4"
 dependencies = [
  "aptos-gas-algebra",
  "aptos-global-constants",
@@ -980,17 +947,14 @@ dependencies = [
 [[package]]
 name = "aptos-global-constants"
 version = "0.1.0"
-source = "git+https://github.com/fuzzland/aptos-core?rev=1e5097063214a84f794ed2373f66a9d325bf6ca4#1e5097063214a84f794ed2373f66a9d325bf6ca4"
 
 [[package]]
 name = "aptos-id-generator"
 version = "0.1.0"
-source = "git+https://github.com/fuzzland/aptos-core?rev=1e5097063214a84f794ed2373f66a9d325bf6ca4#1e5097063214a84f794ed2373f66a9d325bf6ca4"
 
 [[package]]
 name = "aptos-indexer-grpc-fullnode"
 version = "1.0.0"
-source = "git+https://github.com/fuzzland/aptos-core?rev=1e5097063214a84f794ed2373f66a9d325bf6ca4#1e5097063214a84f794ed2373f66a9d325bf6ca4"
 dependencies = [
  "anyhow",
  "aptos-api",
@@ -1026,7 +990,6 @@ dependencies = [
 [[package]]
 name = "aptos-indexer-grpc-table-info"
 version = "1.0.0"
-source = "git+https://github.com/fuzzland/aptos-core?rev=1e5097063214a84f794ed2373f66a9d325bf6ca4#1e5097063214a84f794ed2373f66a9d325bf6ca4"
 dependencies = [
  "anyhow",
  "aptos-api",
@@ -1058,7 +1021,6 @@ dependencies = [
 [[package]]
 name = "aptos-indexer-grpc-utils"
 version = "1.0.0"
-source = "git+https://github.com/fuzzland/aptos-core?rev=1e5097063214a84f794ed2373f66a9d325bf6ca4#1e5097063214a84f794ed2373f66a9d325bf6ca4"
 dependencies = [
  "anyhow",
  "aptos-metrics-core",
@@ -1094,12 +1056,10 @@ dependencies = [
 [[package]]
 name = "aptos-infallible"
 version = "0.1.0"
-source = "git+https://github.com/fuzzland/aptos-core?rev=1e5097063214a84f794ed2373f66a9d325bf6ca4#1e5097063214a84f794ed2373f66a9d325bf6ca4"
 
 [[package]]
 name = "aptos-jellyfish-merkle"
 version = "0.1.0"
-source = "git+https://github.com/fuzzland/aptos-core?rev=1e5097063214a84f794ed2373f66a9d325bf6ca4#1e5097063214a84f794ed2373f66a9d325bf6ca4"
 dependencies = [
  "anyhow",
  "aptos-crypto",
@@ -1125,7 +1085,6 @@ dependencies = [
 [[package]]
 name = "aptos-keygen"
 version = "0.1.0"
-source = "git+https://github.com/fuzzland/aptos-core?rev=1e5097063214a84f794ed2373f66a9d325bf6ca4#1e5097063214a84f794ed2373f66a9d325bf6ca4"
 dependencies = [
  "aptos-crypto",
  "aptos-types",
@@ -1135,7 +1094,6 @@ dependencies = [
 [[package]]
 name = "aptos-ledger"
 version = "0.2.0"
-source = "git+https://github.com/fuzzland/aptos-core?rev=1e5097063214a84f794ed2373f66a9d325bf6ca4#1e5097063214a84f794ed2373f66a9d325bf6ca4"
 dependencies = [
  "aptos-crypto",
  "aptos-types",
@@ -1148,7 +1106,6 @@ dependencies = [
 [[package]]
 name = "aptos-log-derive"
 version = "0.1.0"
-source = "git+https://github.com/fuzzland/aptos-core?rev=1e5097063214a84f794ed2373f66a9d325bf6ca4#1e5097063214a84f794ed2373f66a9d325bf6ca4"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1158,7 +1115,6 @@ dependencies = [
 [[package]]
 name = "aptos-logger"
 version = "0.1.0"
-source = "git+https://github.com/fuzzland/aptos-core?rev=1e5097063214a84f794ed2373f66a9d325bf6ca4#1e5097063214a84f794ed2373f66a9d325bf6ca4"
 dependencies = [
  "aptos-infallible",
  "aptos-log-derive",
@@ -1181,7 +1137,6 @@ dependencies = [
 [[package]]
 name = "aptos-memory-usage-tracker"
 version = "0.1.0"
-source = "git+https://github.com/fuzzland/aptos-core?rev=1e5097063214a84f794ed2373f66a9d325bf6ca4#1e5097063214a84f794ed2373f66a9d325bf6ca4"
 dependencies = [
  "aptos-gas-algebra",
  "aptos-gas-meter",
@@ -1194,7 +1149,6 @@ dependencies = [
 [[package]]
 name = "aptos-mempool"
 version = "0.1.0"
-source = "git+https://github.com/fuzzland/aptos-core?rev=1e5097063214a84f794ed2373f66a9d325bf6ca4#1e5097063214a84f794ed2373f66a9d325bf6ca4"
 dependencies = [
  "anyhow",
  "aptos-bounded-executor",
@@ -1235,7 +1189,6 @@ dependencies = [
 [[package]]
 name = "aptos-mempool-notifications"
 version = "0.1.0"
-source = "git+https://github.com/fuzzland/aptos-core?rev=1e5097063214a84f794ed2373f66a9d325bf6ca4#1e5097063214a84f794ed2373f66a9d325bf6ca4"
 dependencies = [
  "aptos-types",
  "async-trait",
@@ -1248,7 +1201,6 @@ dependencies = [
 [[package]]
 name = "aptos-memsocket"
 version = "0.1.0"
-source = "git+https://github.com/fuzzland/aptos-core?rev=1e5097063214a84f794ed2373f66a9d325bf6ca4#1e5097063214a84f794ed2373f66a9d325bf6ca4"
 dependencies = [
  "aptos-infallible",
  "bytes",
@@ -1259,7 +1211,6 @@ dependencies = [
 [[package]]
 name = "aptos-metrics-core"
 version = "0.1.0"
-source = "git+https://github.com/fuzzland/aptos-core?rev=1e5097063214a84f794ed2373f66a9d325bf6ca4#1e5097063214a84f794ed2373f66a9d325bf6ca4"
 dependencies = [
  "anyhow",
  "once_cell",
@@ -1270,7 +1221,6 @@ dependencies = [
 [[package]]
 name = "aptos-move-stdlib"
 version = "0.1.1"
-source = "git+https://github.com/fuzzland/aptos-core?rev=1e5097063214a84f794ed2373f66a9d325bf6ca4#1e5097063214a84f794ed2373f66a9d325bf6ca4"
 dependencies = [
  "aptos-gas-schedule",
  "aptos-native-interface",
@@ -1295,7 +1245,6 @@ dependencies = [
 [[package]]
 name = "aptos-mvhashmap"
 version = "0.1.0"
-source = "git+https://github.com/fuzzland/aptos-core?rev=1e5097063214a84f794ed2373f66a9d325bf6ca4#1e5097063214a84f794ed2373f66a9d325bf6ca4"
 dependencies = [
  "anyhow",
  "aptos-aggregator",
@@ -1318,7 +1267,6 @@ dependencies = [
 [[package]]
 name = "aptos-native-interface"
 version = "0.1.0"
-source = "git+https://github.com/fuzzland/aptos-core?rev=1e5097063214a84f794ed2373f66a9d325bf6ca4#1e5097063214a84f794ed2373f66a9d325bf6ca4"
 dependencies = [
  "aptos-gas-algebra",
  "aptos-gas-schedule",
@@ -1333,7 +1281,6 @@ dependencies = [
 [[package]]
 name = "aptos-netcore"
 version = "0.1.0"
-source = "git+https://github.com/fuzzland/aptos-core?rev=1e5097063214a84f794ed2373f66a9d325bf6ca4#1e5097063214a84f794ed2373f66a9d325bf6ca4"
 dependencies = [
  "aptos-memsocket",
  "aptos-proxy",
@@ -1350,7 +1297,6 @@ dependencies = [
 [[package]]
 name = "aptos-network"
 version = "0.1.0"
-source = "git+https://github.com/fuzzland/aptos-core?rev=1e5097063214a84f794ed2373f66a9d325bf6ca4#1e5097063214a84f794ed2373f66a9d325bf6ca4"
 dependencies = [
  "anyhow",
  "aptos-bitvec",
@@ -1395,7 +1341,6 @@ dependencies = [
 [[package]]
 name = "aptos-node-resource-metrics"
 version = "0.1.0"
-source = "git+https://github.com/fuzzland/aptos-core?rev=1e5097063214a84f794ed2373f66a9d325bf6ca4#1e5097063214a84f794ed2373f66a9d325bf6ca4"
 dependencies = [
  "aptos-build-info",
  "aptos-infallible",
@@ -1412,7 +1357,6 @@ dependencies = [
 [[package]]
 name = "aptos-num-variants"
 version = "0.1.0"
-source = "git+https://github.com/fuzzland/aptos-core?rev=1e5097063214a84f794ed2373f66a9d325bf6ca4#1e5097063214a84f794ed2373f66a9d325bf6ca4"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1422,7 +1366,6 @@ dependencies = [
 [[package]]
 name = "aptos-openapi"
 version = "0.1.0"
-source = "git+https://github.com/fuzzland/aptos-core?rev=1e5097063214a84f794ed2373f66a9d325bf6ca4#1e5097063214a84f794ed2373f66a9d325bf6ca4"
 dependencies = [
  "percent-encoding",
  "poem",
@@ -1434,7 +1377,6 @@ dependencies = [
 [[package]]
 name = "aptos-package-builder"
 version = "0.1.0"
-source = "git+https://github.com/fuzzland/aptos-core?rev=1e5097063214a84f794ed2373f66a9d325bf6ca4#1e5097063214a84f794ed2373f66a9d325bf6ca4"
 dependencies = [
  "anyhow",
  "aptos-framework",
@@ -1447,7 +1389,6 @@ dependencies = [
 [[package]]
 name = "aptos-peer-monitoring-service-types"
 version = "0.1.0"
-source = "git+https://github.com/fuzzland/aptos-core?rev=1e5097063214a84f794ed2373f66a9d325bf6ca4#1e5097063214a84f794ed2373f66a9d325bf6ca4"
 dependencies = [
  "aptos-config",
  "aptos-types",
@@ -1459,7 +1400,6 @@ dependencies = [
 [[package]]
 name = "aptos-protos"
 version = "1.3.1"
-source = "git+https://github.com/fuzzland/aptos-core?rev=1e5097063214a84f794ed2373f66a9d325bf6ca4#1e5097063214a84f794ed2373f66a9d325bf6ca4"
 dependencies = [
  "pbjson",
  "prost",
@@ -1470,7 +1410,6 @@ dependencies = [
 [[package]]
 name = "aptos-proxy"
 version = "0.1.0"
-source = "git+https://github.com/fuzzland/aptos-core?rev=1e5097063214a84f794ed2373f66a9d325bf6ca4#1e5097063214a84f794ed2373f66a9d325bf6ca4"
 dependencies = [
  "ipnet",
 ]
@@ -1478,7 +1417,6 @@ dependencies = [
 [[package]]
 name = "aptos-push-metrics"
 version = "0.1.0"
-source = "git+https://github.com/fuzzland/aptos-core?rev=1e5097063214a84f794ed2373f66a9d325bf6ca4#1e5097063214a84f794ed2373f66a9d325bf6ca4"
 dependencies = [
  "aptos-logger",
  "aptos-metrics-core",
@@ -1490,7 +1428,6 @@ dependencies = [
 [[package]]
 name = "aptos-resource-viewer"
 version = "0.1.0"
-source = "git+https://github.com/fuzzland/aptos-core?rev=1e5097063214a84f794ed2373f66a9d325bf6ca4#1e5097063214a84f794ed2373f66a9d325bf6ca4"
 dependencies = [
  "anyhow",
  "aptos-types",
@@ -1505,7 +1442,6 @@ dependencies = [
 [[package]]
 name = "aptos-rest-client"
 version = "0.0.0"
-source = "git+https://github.com/fuzzland/aptos-core?rev=1e5097063214a84f794ed2373f66a9d325bf6ca4#1e5097063214a84f794ed2373f66a9d325bf6ca4"
 dependencies = [
  "anyhow",
  "aptos-api-types",
@@ -1528,7 +1464,6 @@ dependencies = [
 [[package]]
 name = "aptos-rocksdb-options"
 version = "0.1.0"
-source = "git+https://github.com/fuzzland/aptos-core?rev=1e5097063214a84f794ed2373f66a9d325bf6ca4#1e5097063214a84f794ed2373f66a9d325bf6ca4"
 dependencies = [
  "aptos-config",
  "rocksdb",
@@ -1537,7 +1472,6 @@ dependencies = [
 [[package]]
 name = "aptos-runtimes"
 version = "0.1.0"
-source = "git+https://github.com/fuzzland/aptos-core?rev=1e5097063214a84f794ed2373f66a9d325bf6ca4#1e5097063214a84f794ed2373f66a9d325bf6ca4"
 dependencies = [
  "rayon",
  "tokio",
@@ -1546,7 +1480,6 @@ dependencies = [
 [[package]]
 name = "aptos-schemadb"
 version = "0.1.0"
-source = "git+https://github.com/fuzzland/aptos-core?rev=1e5097063214a84f794ed2373f66a9d325bf6ca4#1e5097063214a84f794ed2373f66a9d325bf6ca4"
 dependencies = [
  "anyhow",
  "aptos-drop-helper",
@@ -1562,7 +1495,6 @@ dependencies = [
 [[package]]
 name = "aptos-scratchpad"
 version = "0.1.0"
-source = "git+https://github.com/fuzzland/aptos-core?rev=1e5097063214a84f794ed2373f66a9d325bf6ca4#1e5097063214a84f794ed2373f66a9d325bf6ca4"
 dependencies = [
  "aptos-crypto",
  "aptos-drop-helper",
@@ -1581,7 +1513,6 @@ dependencies = [
 [[package]]
 name = "aptos-sdk"
 version = "0.0.3"
-source = "git+https://github.com/fuzzland/aptos-core?rev=1e5097063214a84f794ed2373f66a9d325bf6ca4#1e5097063214a84f794ed2373f66a9d325bf6ca4"
 dependencies = [
  "anyhow",
  "aptos-cached-packages",
@@ -1607,7 +1538,6 @@ dependencies = [
 [[package]]
 name = "aptos-sdk-builder"
 version = "0.2.0"
-source = "git+https://github.com/fuzzland/aptos-core?rev=1e5097063214a84f794ed2373f66a9d325bf6ca4#1e5097063214a84f794ed2373f66a9d325bf6ca4"
 dependencies = [
  "anyhow",
  "aptos-types",
@@ -1625,7 +1555,6 @@ dependencies = [
 [[package]]
 name = "aptos-secure-net"
 version = "0.1.0"
-source = "git+https://github.com/fuzzland/aptos-core?rev=1e5097063214a84f794ed2373f66a9d325bf6ca4#1e5097063214a84f794ed2373f66a9d325bf6ca4"
 dependencies = [
  "aptos-logger",
  "aptos-metrics-core",
@@ -1643,7 +1572,6 @@ dependencies = [
 [[package]]
 name = "aptos-secure-storage"
 version = "0.1.0"
-source = "git+https://github.com/fuzzland/aptos-core?rev=1e5097063214a84f794ed2373f66a9d325bf6ca4#1e5097063214a84f794ed2373f66a9d325bf6ca4"
 dependencies = [
  "aptos-crypto",
  "aptos-infallible",
@@ -1664,7 +1592,6 @@ dependencies = [
 [[package]]
 name = "aptos-short-hex-str"
 version = "0.1.0"
-source = "git+https://github.com/fuzzland/aptos-core?rev=1e5097063214a84f794ed2373f66a9d325bf6ca4#1e5097063214a84f794ed2373f66a9d325bf6ca4"
 dependencies = [
  "mirai-annotations",
  "serde",
@@ -1675,7 +1602,6 @@ dependencies = [
 [[package]]
 name = "aptos-speculative-state-helper"
 version = "0.1.0"
-source = "git+https://github.com/fuzzland/aptos-core?rev=1e5097063214a84f794ed2373f66a9d325bf6ca4#1e5097063214a84f794ed2373f66a9d325bf6ca4"
 dependencies = [
  "anyhow",
  "aptos-infallible",
@@ -1686,7 +1612,6 @@ dependencies = [
 [[package]]
 name = "aptos-storage-interface"
 version = "0.1.0"
-source = "git+https://github.com/fuzzland/aptos-core?rev=1e5097063214a84f794ed2373f66a9d325bf6ca4#1e5097063214a84f794ed2373f66a9d325bf6ca4"
 dependencies = [
  "anyhow",
  "aptos-crypto",
@@ -1714,7 +1639,6 @@ dependencies = [
 [[package]]
 name = "aptos-table-natives"
 version = "0.1.0"
-source = "git+https://github.com/fuzzland/aptos-core?rev=1e5097063214a84f794ed2373f66a9d325bf6ca4#1e5097063214a84f794ed2373f66a9d325bf6ca4"
 dependencies = [
  "aptos-gas-schedule",
  "aptos-native-interface",
@@ -1732,7 +1656,6 @@ dependencies = [
 [[package]]
 name = "aptos-temppath"
 version = "0.1.0"
-source = "git+https://github.com/fuzzland/aptos-core?rev=1e5097063214a84f794ed2373f66a9d325bf6ca4#1e5097063214a84f794ed2373f66a9d325bf6ca4"
 dependencies = [
  "hex",
  "rand 0.7.3",
@@ -1741,7 +1664,6 @@ dependencies = [
 [[package]]
 name = "aptos-time-service"
 version = "0.1.0"
-source = "git+https://github.com/fuzzland/aptos-core?rev=1e5097063214a84f794ed2373f66a9d325bf6ca4#1e5097063214a84f794ed2373f66a9d325bf6ca4"
 dependencies = [
  "aptos-infallible",
  "enum_dispatch",
@@ -1754,7 +1676,6 @@ dependencies = [
 [[package]]
 name = "aptos-transaction-filter"
 version = "0.1.0"
-source = "git+https://github.com/fuzzland/aptos-core?rev=1e5097063214a84f794ed2373f66a9d325bf6ca4#1e5097063214a84f794ed2373f66a9d325bf6ca4"
 dependencies = [
  "anyhow",
  "aptos-protos",
@@ -1772,7 +1693,6 @@ dependencies = [
 [[package]]
 name = "aptos-transaction-filters"
 version = "0.1.0"
-source = "git+https://github.com/fuzzland/aptos-core?rev=1e5097063214a84f794ed2373f66a9d325bf6ca4#1e5097063214a84f794ed2373f66a9d325bf6ca4"
 dependencies = [
  "aptos-crypto",
  "aptos-types",
@@ -1785,7 +1705,6 @@ dependencies = [
 [[package]]
 name = "aptos-types"
 version = "0.0.3"
-source = "git+https://github.com/fuzzland/aptos-core?rev=1e5097063214a84f794ed2373f66a9d325bf6ca4#1e5097063214a84f794ed2373f66a9d325bf6ca4"
 dependencies = [
  "anyhow",
  "aptos-bitvec",
@@ -1851,7 +1770,6 @@ dependencies = [
 [[package]]
 name = "aptos-vault-client"
 version = "0.1.0"
-source = "git+https://github.com/fuzzland/aptos-core?rev=1e5097063214a84f794ed2373f66a9d325bf6ca4#1e5097063214a84f794ed2373f66a9d325bf6ca4"
 dependencies = [
  "aptos-crypto",
  "base64 0.13.1",
@@ -1867,7 +1785,6 @@ dependencies = [
 [[package]]
 name = "aptos-vm"
 version = "0.1.0"
-source = "git+https://github.com/fuzzland/aptos-core?rev=1e5097063214a84f794ed2373f66a9d325bf6ca4#1e5097063214a84f794ed2373f66a9d325bf6ca4"
 dependencies = [
  "anyhow",
  "aptos-aggregator",
@@ -1918,7 +1835,6 @@ dependencies = [
 [[package]]
 name = "aptos-vm-environment"
 version = "0.0.1"
-source = "git+https://github.com/fuzzland/aptos-core?rev=1e5097063214a84f794ed2373f66a9d325bf6ca4#1e5097063214a84f794ed2373f66a9d325bf6ca4"
 dependencies = [
  "aptos-framework",
  "aptos-gas-algebra",
@@ -1941,7 +1857,6 @@ dependencies = [
 [[package]]
 name = "aptos-vm-genesis"
 version = "0.1.0"
-source = "git+https://github.com/fuzzland/aptos-core?rev=1e5097063214a84f794ed2373f66a9d325bf6ca4#1e5097063214a84f794ed2373f66a9d325bf6ca4"
 dependencies = [
  "aptos-cached-packages",
  "aptos-crypto",
@@ -1965,7 +1880,6 @@ dependencies = [
 [[package]]
 name = "aptos-vm-logging"
 version = "0.1.0"
-source = "git+https://github.com/fuzzland/aptos-core?rev=1e5097063214a84f794ed2373f66a9d325bf6ca4#1e5097063214a84f794ed2373f66a9d325bf6ca4"
 dependencies = [
  "aptos-crypto",
  "aptos-logger",
@@ -1980,7 +1894,6 @@ dependencies = [
 [[package]]
 name = "aptos-vm-types"
 version = "0.0.1"
-source = "git+https://github.com/fuzzland/aptos-core?rev=1e5097063214a84f794ed2373f66a9d325bf6ca4#1e5097063214a84f794ed2373f66a9d325bf6ca4"
 dependencies = [
  "ambassador",
  "anyhow",
@@ -2003,7 +1916,6 @@ dependencies = [
 [[package]]
 name = "aptos-vm-validator"
 version = "0.1.0"
-source = "git+https://github.com/fuzzland/aptos-core?rev=1e5097063214a84f794ed2373f66a9d325bf6ca4#1e5097063214a84f794ed2373f66a9d325bf6ca4"
 dependencies = [
  "anyhow",
  "aptos-logger",
@@ -5664,7 +5576,6 @@ dependencies = [
 [[package]]
 name = "legacy-move-compiler"
 version = "0.0.1"
-source = "git+https://github.com/fuzzland/aptos-core?rev=1e5097063214a84f794ed2373f66a9d325bf6ca4#1e5097063214a84f794ed2373f66a9d325bf6ca4"
 dependencies = [
  "anyhow",
  "bcs 0.1.4",
@@ -6142,7 +6053,6 @@ checksum = "1fafa6961cabd9c63bcd77a45d7e3b7f3b552b70417831fb0f56db717e72407e"
 [[package]]
 name = "move-abigen"
 version = "0.1.0"
-source = "git+https://github.com/fuzzland/aptos-core?rev=1e5097063214a84f794ed2373f66a9d325bf6ca4#1e5097063214a84f794ed2373f66a9d325bf6ca4"
 dependencies = [
  "anyhow",
  "bcs 0.1.4",
@@ -6159,7 +6069,6 @@ dependencies = [
 [[package]]
 name = "move-asm"
 version = "0.1.0"
-source = "git+https://github.com/fuzzland/aptos-core?rev=1e5097063214a84f794ed2373f66a9d325bf6ca4#1e5097063214a84f794ed2373f66a9d325bf6ca4"
 dependencies = [
  "anyhow",
  "clap 4.5.47",
@@ -6173,7 +6082,6 @@ dependencies = [
 [[package]]
 name = "move-binary-format"
 version = "0.0.3"
-source = "git+https://github.com/fuzzland/aptos-core?rev=1e5097063214a84f794ed2373f66a9d325bf6ca4#1e5097063214a84f794ed2373f66a9d325bf6ca4"
 dependencies = [
  "anyhow",
  "backtrace",
@@ -6189,12 +6097,10 @@ dependencies = [
 [[package]]
 name = "move-borrow-graph"
 version = "0.0.1"
-source = "git+https://github.com/fuzzland/aptos-core?rev=1e5097063214a84f794ed2373f66a9d325bf6ca4#1e5097063214a84f794ed2373f66a9d325bf6ca4"
 
 [[package]]
 name = "move-bytecode-source-map"
 version = "0.1.0"
-source = "git+https://github.com/fuzzland/aptos-core?rev=1e5097063214a84f794ed2373f66a9d325bf6ca4#1e5097063214a84f794ed2373f66a9d325bf6ca4"
 dependencies = [
  "anyhow",
  "bcs 0.1.4",
@@ -6209,7 +6115,6 @@ dependencies = [
 [[package]]
 name = "move-bytecode-spec"
 version = "0.1.0"
-source = "git+https://github.com/fuzzland/aptos-core?rev=1e5097063214a84f794ed2373f66a9d325bf6ca4#1e5097063214a84f794ed2373f66a9d325bf6ca4"
 dependencies = [
  "once_cell",
  "quote",
@@ -6219,7 +6124,6 @@ dependencies = [
 [[package]]
 name = "move-bytecode-utils"
 version = "0.1.0"
-source = "git+https://github.com/fuzzland/aptos-core?rev=1e5097063214a84f794ed2373f66a9d325bf6ca4#1e5097063214a84f794ed2373f66a9d325bf6ca4"
 dependencies = [
  "anyhow",
  "move-binary-format",
@@ -6231,7 +6135,6 @@ dependencies = [
 [[package]]
 name = "move-bytecode-verifier"
 version = "0.1.0"
-source = "git+https://github.com/fuzzland/aptos-core?rev=1e5097063214a84f794ed2373f66a9d325bf6ca4#1e5097063214a84f794ed2373f66a9d325bf6ca4"
 dependencies = [
  "fail",
  "move-binary-format",
@@ -6245,7 +6148,6 @@ dependencies = [
 [[package]]
 name = "move-bytecode-viewer"
 version = "0.1.0"
-source = "git+https://github.com/fuzzland/aptos-core?rev=1e5097063214a84f794ed2373f66a9d325bf6ca4#1e5097063214a84f794ed2373f66a9d325bf6ca4"
 dependencies = [
  "anyhow",
  "clap 4.5.47",
@@ -6260,7 +6162,6 @@ dependencies = [
 [[package]]
 name = "move-cli"
 version = "0.1.0"
-source = "git+https://github.com/fuzzland/aptos-core?rev=1e5097063214a84f794ed2373f66a9d325bf6ca4#1e5097063214a84f794ed2373f66a9d325bf6ca4"
 dependencies = [
  "anyhow",
  "clap 4.5.47",
@@ -6290,7 +6191,6 @@ dependencies = [
 [[package]]
 name = "move-command-line-common"
 version = "0.1.0"
-source = "git+https://github.com/fuzzland/aptos-core?rev=1e5097063214a84f794ed2373f66a9d325bf6ca4#1e5097063214a84f794ed2373f66a9d325bf6ca4"
 dependencies = [
  "anyhow",
  "difference",
@@ -6307,7 +6207,6 @@ dependencies = [
 [[package]]
 name = "move-compiler-v2"
 version = "0.1.0"
-source = "git+https://github.com/fuzzland/aptos-core?rev=1e5097063214a84f794ed2373f66a9d325bf6ca4#1e5097063214a84f794ed2373f66a9d325bf6ca4"
 dependencies = [
  "abstract-domain-derive",
  "anyhow",
@@ -6342,7 +6241,6 @@ dependencies = [
 [[package]]
 name = "move-core-types"
 version = "0.0.4"
-source = "git+https://github.com/fuzzland/aptos-core?rev=1e5097063214a84f794ed2373f66a9d325bf6ca4#1e5097063214a84f794ed2373f66a9d325bf6ca4"
 dependencies = [
  "anyhow",
  "arbitrary",
@@ -6368,7 +6266,6 @@ dependencies = [
 [[package]]
 name = "move-coverage"
 version = "0.1.0"
-source = "git+https://github.com/fuzzland/aptos-core?rev=1e5097063214a84f794ed2373f66a9d325bf6ca4#1e5097063214a84f794ed2373f66a9d325bf6ca4"
 dependencies = [
  "anyhow",
  "bcs 0.1.4",
@@ -6387,7 +6284,6 @@ dependencies = [
 [[package]]
 name = "move-disassembler"
 version = "0.1.0"
-source = "git+https://github.com/fuzzland/aptos-core?rev=1e5097063214a84f794ed2373f66a9d325bf6ca4#1e5097063214a84f794ed2373f66a9d325bf6ca4"
 dependencies = [
  "anyhow",
  "clap 4.5.47",
@@ -6404,7 +6300,6 @@ dependencies = [
 [[package]]
 name = "move-docgen"
 version = "0.1.0"
-source = "git+https://github.com/fuzzland/aptos-core?rev=1e5097063214a84f794ed2373f66a9d325bf6ca4#1e5097063214a84f794ed2373f66a9d325bf6ca4"
 dependencies = [
  "anyhow",
  "clap 4.5.47",
@@ -6423,7 +6318,6 @@ dependencies = [
 [[package]]
 name = "move-errmapgen"
 version = "0.1.0"
-source = "git+https://github.com/fuzzland/aptos-core?rev=1e5097063214a84f794ed2373f66a9d325bf6ca4#1e5097063214a84f794ed2373f66a9d325bf6ca4"
 dependencies = [
  "anyhow",
  "move-command-line-common",
@@ -6435,7 +6329,6 @@ dependencies = [
 [[package]]
 name = "move-ir-types"
 version = "0.1.0"
-source = "git+https://github.com/fuzzland/aptos-core?rev=1e5097063214a84f794ed2373f66a9d325bf6ca4#1e5097063214a84f794ed2373f66a9d325bf6ca4"
 dependencies = [
  "hex",
  "move-command-line-common",
@@ -6448,7 +6341,6 @@ dependencies = [
 [[package]]
 name = "move-model"
 version = "0.1.0"
-source = "git+https://github.com/fuzzland/aptos-core?rev=1e5097063214a84f794ed2373f66a9d325bf6ca4#1e5097063214a84f794ed2373f66a9d325bf6ca4"
 dependencies = [
  "anyhow",
  "codespan",
@@ -6475,7 +6367,6 @@ dependencies = [
 [[package]]
 name = "move-package"
 version = "0.1.0"
-source = "git+https://github.com/fuzzland/aptos-core?rev=1e5097063214a84f794ed2373f66a9d325bf6ca4#1e5097063214a84f794ed2373f66a9d325bf6ca4"
 dependencies = [
  "anyhow",
  "clap 4.5.47",
@@ -6509,7 +6400,6 @@ dependencies = [
 [[package]]
 name = "move-prover"
 version = "0.1.0"
-source = "git+https://github.com/fuzzland/aptos-core?rev=1e5097063214a84f794ed2373f66a9d325bf6ca4#1e5097063214a84f794ed2373f66a9d325bf6ca4"
 dependencies = [
  "anyhow",
  "atty",
@@ -6535,7 +6425,6 @@ dependencies = [
 [[package]]
 name = "move-prover-boogie-backend"
 version = "0.1.0"
-source = "git+https://github.com/fuzzland/aptos-core?rev=1e5097063214a84f794ed2373f66a9d325bf6ca4#1e5097063214a84f794ed2373f66a9d325bf6ca4"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -6564,7 +6453,6 @@ dependencies = [
 [[package]]
 name = "move-prover-bytecode-pipeline"
 version = "0.1.0"
-source = "git+https://github.com/fuzzland/aptos-core?rev=1e5097063214a84f794ed2373f66a9d325bf6ca4#1e5097063214a84f794ed2373f66a9d325bf6ca4"
 dependencies = [
  "abstract-domain-derive",
  "anyhow",
@@ -6580,7 +6468,6 @@ dependencies = [
 [[package]]
 name = "move-prover-lab"
 version = "0.1.0"
-source = "git+https://github.com/fuzzland/aptos-core?rev=1e5097063214a84f794ed2373f66a9d325bf6ca4#1e5097063214a84f794ed2373f66a9d325bf6ca4"
 dependencies = [
  "anyhow",
  "chrono",
@@ -6598,7 +6485,6 @@ dependencies = [
 [[package]]
 name = "move-resource-viewer"
 version = "0.1.0"
-source = "git+https://github.com/fuzzland/aptos-core?rev=1e5097063214a84f794ed2373f66a9d325bf6ca4#1e5097063214a84f794ed2373f66a9d325bf6ca4"
 dependencies = [
  "anyhow",
  "hex",
@@ -6611,7 +6497,6 @@ dependencies = [
 [[package]]
 name = "move-stackless-bytecode"
 version = "0.1.0"
-source = "git+https://github.com/fuzzland/aptos-core?rev=1e5097063214a84f794ed2373f66a9d325bf6ca4#1e5097063214a84f794ed2373f66a9d325bf6ca4"
 dependencies = [
  "abstract-domain-derive",
  "anyhow",
@@ -6633,7 +6518,6 @@ dependencies = [
 [[package]]
 name = "move-stdlib"
 version = "0.1.1"
-source = "git+https://github.com/fuzzland/aptos-core?rev=1e5097063214a84f794ed2373f66a9d325bf6ca4#1e5097063214a84f794ed2373f66a9d325bf6ca4"
 dependencies = [
  "anyhow",
  "hex",
@@ -6656,7 +6540,6 @@ dependencies = [
 [[package]]
 name = "move-symbol-pool"
 version = "0.1.0"
-source = "git+https://github.com/fuzzland/aptos-core?rev=1e5097063214a84f794ed2373f66a9d325bf6ca4#1e5097063214a84f794ed2373f66a9d325bf6ca4"
 dependencies = [
  "once_cell",
  "serde",
@@ -6665,7 +6548,6 @@ dependencies = [
 [[package]]
 name = "move-table-extension"
 version = "0.1.0"
-source = "git+https://github.com/fuzzland/aptos-core?rev=1e5097063214a84f794ed2373f66a9d325bf6ca4#1e5097063214a84f794ed2373f66a9d325bf6ca4"
 dependencies = [
  "better_any",
  "bytes",
@@ -6680,7 +6562,6 @@ dependencies = [
 [[package]]
 name = "move-unit-test"
 version = "0.1.0"
-source = "git+https://github.com/fuzzland/aptos-core?rev=1e5097063214a84f794ed2373f66a9d325bf6ca4#1e5097063214a84f794ed2373f66a9d325bf6ca4"
 dependencies = [
  "anyhow",
  "better_any",
@@ -6712,7 +6593,6 @@ dependencies = [
 [[package]]
 name = "move-vm-metrics"
 version = "0.1.0"
-source = "git+https://github.com/fuzzland/aptos-core?rev=1e5097063214a84f794ed2373f66a9d325bf6ca4#1e5097063214a84f794ed2373f66a9d325bf6ca4"
 dependencies = [
  "once_cell",
  "prometheus",
@@ -6721,7 +6601,6 @@ dependencies = [
 [[package]]
 name = "move-vm-runtime"
 version = "0.1.0"
-source = "git+https://github.com/fuzzland/aptos-core?rev=1e5097063214a84f794ed2373f66a9d325bf6ca4#1e5097063214a84f794ed2373f66a9d325bf6ca4"
 dependencies = [
  "ambassador",
  "better_any",
@@ -6747,7 +6626,6 @@ dependencies = [
 [[package]]
 name = "move-vm-test-utils"
 version = "0.1.0"
-source = "git+https://github.com/fuzzland/aptos-core?rev=1e5097063214a84f794ed2373f66a9d325bf6ca4#1e5097063214a84f794ed2373f66a9d325bf6ca4"
 dependencies = [
  "anyhow",
  "bytes",
@@ -6764,7 +6642,6 @@ dependencies = [
 [[package]]
 name = "move-vm-types"
 version = "0.1.0"
-source = "git+https://github.com/fuzzland/aptos-core?rev=1e5097063214a84f794ed2373f66a9d325bf6ca4#1e5097063214a84f794ed2373f66a9d325bf6ca4"
 dependencies = [
  "ambassador",
  "bcs 0.1.4",
