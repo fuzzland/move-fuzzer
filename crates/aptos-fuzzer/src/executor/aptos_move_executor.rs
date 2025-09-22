@@ -123,20 +123,15 @@ impl<EM, Z> AptosMoveExecutor<EM, Z> {
                 // validation/gas/nonce/signature.
                 let (code, ty_args, txn_args) = script.clone().into_inner();
 
-                // Serialize TransactionArgument -> MoveValue -> bytes
                 let move_values: Vec<MoveValue> = txn_args.into_iter().map(MoveValue::from).collect();
                 let args: Vec<Vec<u8>> = value::serialize_values(&move_values);
 
-                // Create an Aptos session (provides data cache and native extensions) but
-                // execute via loader.
                 let mut session = self.aptos_vm.new_session(state, SessionId::void(), None);
 
                 let mut gas = UnmeteredGasMeter;
                 let storage = aptos_move_vm_runtime::module_traversal::TraversalStorage::new();
                 let mut traversal = aptos_move_vm_runtime::module_traversal::TraversalContext::new(&storage);
 
-                // Load script and execute through SessionExt::execute_loaded_function
-                // (low-level MoveVM call internally).
                 aptos_move_vm_runtime::dispatch_loader!(state, loader, {
                     let function = loader
                         .load_script(
