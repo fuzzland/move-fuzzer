@@ -1,16 +1,25 @@
 use std::marker::PhantomData;
+use std::sync::OnceLock;
 
 use anyhow::Result;
+use aptos_crypto::ed25519::{ED25519_PUBLIC_KEY_LENGTH, ED25519_SIGNATURE_LENGTH, Ed25519PublicKey, Ed25519Signature};
+use aptos_move_core_types::account_address::AccountAddress;
+use aptos_move_core_types::identifier::IdentStr;
+use aptos_move_core_types::language_storage::TypeTag;
+use aptos_move_vm_runtime::move_vm::SerializedReturnValues;
+use aptos_move_vm_types::gas::UnmeteredGasMeter;
+use aptos_types::account_address;
+use aptos_types::chain_id::ChainId;
 use aptos_types::state_store::state_key::StateKey;
 use aptos_types::state_store::state_value::StateValue;
-use aptos_types::transaction::{SignedTransaction, TransactionPayload};
-use aptos_types::chain_id::ChainId;
-use aptos_types::transaction::RawTransaction;
-use aptos_crypto::ed25519::{Ed25519PrivateKey, Ed25519PublicKey, ED25519_PRIVATE_KEY_LENGTH};
-use aptos_crypto::traits::{SigningKey, PrivateKey};
-use aptos_types::account_address;
+use aptos_types::transaction::authenticator::{
+    AccountAuthenticator, AnyPublicKey, AnySignature, SingleKeyAuthenticator, TransactionAuthenticator,
+};
+use aptos_types::transaction::{RawTransaction, SignedTransaction, TransactionPayload};
 use aptos_vm::AptosVM;
-use aptos_vm_logging::log_schema::AdapterLogSchema;
+use aptos_vm::move_vm_ext::SessionId;
+use aptos_vm_types::module_write_set::ModuleWriteSet;
+use aptos_vm_types::storage::change_set_configs::ChangeSetConfigs;
 use libafl::executors::{Executor, ExitKind, HasObservers};
 use libafl_bolts::tuples::RefIndexable;
 
@@ -33,32 +42,32 @@ impl<EM, Z> AptosMoveExecutor<EM, Z> {
     }
 
     fn to_signed_transaction(input: TransactionPayload) -> SignedTransaction {
-        // Deterministic test key: use a trivial numeric seed to form a private key.
-        let mut sk_bytes = [0u8; ED25519_PRIVATE_KEY_LENGTH];
-        sk_bytes[ED25519_PRIVATE_KEY_LENGTH - 1] = 1;
-        let privkey: Ed25519PrivateKey =
-            Ed25519PrivateKey::try_from(sk_bytes.as_slice()).expect("valid ed25519 private key bytes");
-        let pubkey: Ed25519PublicKey = privkey.public_key();
+        static TXN_AUTH: OnceLock<TransactionAuthenticator> = OnceLock::new();
+        let txn_auth = TXN_AUTH
+            .get_or_init(|| {
+                let zero_pk = Ed25519PublicKey::try_from(&[0u8; ED25519_PUBLIC_KEY_LENGTH][..])
+                    .expect("valid zero ed25519 pubkey bytes");
+                let zero_sig = Ed25519Signature::try_from(&[0u8; ED25519_SIGNATURE_LENGTH][..])
+                    .expect("valid zero ed25519 signature bytes");
+                let single =
+                    SingleKeyAuthenticator::new(AnyPublicKey::ed25519(zero_pk), AnySignature::ed25519(zero_sig));
+                let account_auth = AccountAuthenticator::single_key(single);
+                TransactionAuthenticator::single_sender(account_auth)
+            })
+            .clone();
 
-        let sender = account_address::from_public_key(&pubkey);
-        let sequence_number = 0u64;
-        let max_gas_amount = 1_000_000u64;
-        let gas_unit_price = 1u64;
-        let expiration_timestamp_secs = u32::MAX as u64;
-        let chain_id = ChainId::test();
-
+        // Minimal RawTransaction: only payload varies per call.
         let raw_txn = RawTransaction::new(
-            sender,
-            sequence_number,
+            AccountAddress::ZERO,
+            0,
             input,
-            max_gas_amount,
-            gas_unit_price,
-            expiration_timestamp_secs,
-            chain_id,
+            1_000_000,
+            1,
+            u32::MAX as u64,
+            ChainId::test(),
         );
 
-        let signature = privkey.sign(&raw_txn).expect("signing must succeed");
-        SignedTransaction::new(raw_txn, pubkey, signature)
+        SignedTransaction::new_signed_transaction(raw_txn, txn_auth)
     }
 
     pub fn execute_transaction(
@@ -66,24 +75,53 @@ impl<EM, Z> AptosMoveExecutor<EM, Z> {
         transaction: TransactionPayload,
         state: &AptosCustomState,
     ) -> Result<TransactionResult> {
-        let (vm_status, vm_output) = self.aptos_vm.execute_user_transaction(
-            state,
-            state,
-            &Self::to_signed_transaction(transaction),
-            &AdapterLogSchema::new(state.id(), 0),
-            &aptos_types::transaction::AuxiliaryInfo::new(aptos_types::transaction::PersistedAuxiliaryInfo::None, None),
-        );
+        let mut session = self.aptos_vm.new_session(state, SessionId::void(), None);
 
-        let txn_output = vm_output
-            .try_materialize_into_transaction_output(state)
-            .map_err(|e| anyhow::anyhow!("materialize failed: {e:?}; vm_status: {vm_status:?}"))?;
+        let entry = match &transaction {
+            TransactionPayload::EntryFunction(f) => f,
+            _ => {
+                anyhow::bail!("Only EntryFunction payload is supported in session mode")
+            }
+        };
+
+        let module_id = entry.module().clone();
+        let func_name: &IdentStr = entry.function();
+        let ty_args: Vec<TypeTag> = entry.ty_args().to_vec();
+        let args: Vec<&[u8]> = entry.args().iter().map(|v| v.as_slice()).collect();
+
+        let mut gas = UnmeteredGasMeter;
+        let storage = aptos_move_vm_runtime::module_traversal::TraversalStorage::new();
+        let mut traversal = aptos_move_vm_runtime::module_traversal::TraversalContext::new(&storage);
+
+        let _ret: SerializedReturnValues = session
+            .execute_function_bypass_visibility(
+                &module_id,
+                func_name,
+                ty_args,
+                args,
+                &mut gas,
+                &mut traversal,
+                state,
+            )
+            .map_err(|e| anyhow::anyhow!("session execute failed: {e:?}"))?;
+
+        let change_set = session
+            .finish(&ChangeSetConfigs::unlimited_at_gas_feature_version(0), state)
+            .map_err(|e| anyhow::anyhow!("session finish failed: {e:?}"))?;
+        let storage_change_set = change_set
+            .try_combine_into_storage_change_set(ModuleWriteSet::empty())
+            .map_err(|e| anyhow::anyhow!("convert change set failed: {e:?}"))?;
+        let write_set = storage_change_set.write_set().clone();
+        let events = storage_change_set.events().to_vec();
 
         Ok(TransactionResult {
-            status: txn_output.status().clone(),
-            gas_used: txn_output.gas_used(),
-            write_set: txn_output.write_set().clone(),
-            events: txn_output.events().to_vec(),
-            fee_statement: txn_output.try_extract_fee_statement().ok().flatten(),
+            status: aptos_types::transaction::TransactionStatus::Keep(
+                aptos_types::vm_status::KeptVMStatus::Executed.into(),
+            ),
+            gas_used: 0,
+            write_set,
+            events,
+            fee_statement: None,
         })
     }
 }
