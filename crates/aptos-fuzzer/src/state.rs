@@ -52,8 +52,7 @@ impl AptosFuzzerState {
     pub fn new() -> Self {
         let state = Self {
             // TODO: replace me with actual aptos state
-            aptos_state: AptosCustomState::new_stub(),
-
+            aptos_state: AptosCustomState::new_default(),
             rand: StdRand::new(),
             executions: 0,
             start_time: Duration::from_secs(0),
