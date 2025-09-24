@@ -17,7 +17,7 @@ pub struct AptosMoveExecutor<EM, Z> {
 
 impl<EM, Z> AptosMoveExecutor<EM, Z> {
     pub fn new() -> Self {
-        let env = todo!("initialize aptos environment");
+        let env = super::aptos_custom_state::AptosCustomState::default_env();
         Self {
             aptos_vm: AptosVM::new_fuzzer(&env),
             _phantom: PhantomData,

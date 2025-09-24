@@ -16,7 +16,7 @@ use aptos_move_table_extension::{TableHandle, TableResolver};
 use aptos_move_vm_runtime::{Module, ModuleStorage, RuntimeEnvironment, Script, WithRuntimeEnvironment};
 use aptos_native_interface::SafeNativeBuilder;
 use aptos_types::chain_id::ChainId;
-use aptos_types::on_chain_config::{Features, TimedFeaturesBuilder, OnChainConfig};
+use aptos_types::on_chain_config::{Features, TimedFeaturesBuilder};
 use aptos_vm_environment::natives::aptos_natives_with_builder;
 use aptos_vm_environment::prod_configs::{aptos_default_ty_builder, aptos_prod_vm_config};
 use aptos_gas_schedule::{MiscGasParameters, NativeGasParameters};
@@ -537,6 +537,35 @@ impl AptosCustomState {
             scripts_verified: DashMap::new(),
             runtime_environment,
         }
+    }
+
+    pub fn default_env() -> aptos_vm_environment::environment::AptosEnvironment {
+        // Build a temporary default state, and wrap it into a minimal StateView for env init.
+        let tmp = Self::new_default();
+
+        struct DefaultStateView<'a> {
+            state: &'a AptosCustomState,
+        }
+
+        impl<'a> aptos_types::state_store::TStateView for DefaultStateView<'a> {
+            type Key = StateKey;
+
+            fn get_usage(
+                &self,
+            ) -> aptos_types::state_store::StateViewResult<StateStorageUsage> {
+                Ok(StateStorageUsage::Untracked)
+            }
+
+            fn get_state_value(
+                &self,
+                state_key: &StateKey,
+            ) -> aptos_types::state_store::StateViewResult<Option<StateValue>> {
+                Ok(self.state.kv_state.get(state_key).cloned())
+            }
+        }
+
+        let view = DefaultStateView { state: &tmp };
+        aptos_vm_environment::environment::AptosEnvironment::new(&view)
     }
 
     pub fn id(&self) -> StateViewId {
