@@ -14,6 +14,12 @@ use aptos_move_core_types::metadata::Metadata;
 use aptos_move_core_types::value::MoveTypeLayout;
 use aptos_move_table_extension::{TableHandle, TableResolver};
 use aptos_move_vm_runtime::{Module, ModuleStorage, RuntimeEnvironment, Script, WithRuntimeEnvironment};
+use aptos_native_interface::SafeNativeBuilder;
+use aptos_types::chain_id::ChainId;
+use aptos_types::on_chain_config::{Features, TimedFeaturesBuilder};
+use aptos_vm_environment::natives::aptos_natives_with_builder;
+use aptos_vm_environment::prod_configs::{aptos_default_ty_builder, aptos_prod_vm_config};
+use aptos_gas_schedule::{MiscGasParameters, NativeGasParameters};
 use aptos_move_vm_types::code::{Code, ScriptCache};
 use aptos_move_vm_types::delayed_values::delayed_field_id::DelayedFieldID;
 use aptos_move_vm_types::resolver::ResourceResolver;
@@ -486,14 +492,80 @@ impl std::fmt::Debug for AptosCustomState {
 
 impl AptosCustomState {
     pub fn new_default() -> Self {
+        // Build a minimal Aptos-like runtime environment (natives + VM config).
+        // This mirrors aptos-core's AptosEnvironment defaults when on-chain configs are missing.
+        let chain_id = ChainId::test();
+        let features = Features::default();
+        let timed_features = TimedFeaturesBuilder::new(chain_id, 0).build();
+        let gas_feature_version = 0u64;
+        let mut builder = SafeNativeBuilder::new(
+            gas_feature_version,
+            NativeGasParameters::zeros(),
+            MiscGasParameters::zeros(),
+            timed_features.clone(),
+            features.clone(),
+            None,
+        );
+        let natives = aptos_natives_with_builder(&mut builder, false);
+        let vm_config = aptos_prod_vm_config(
+            gas_feature_version,
+            &features,
+            &timed_features,
+            aptos_default_ty_builder(),
+        );
+        let runtime_environment = RuntimeEnvironment::new_with_config(natives, vm_config);
+
+        // Seed essential on-chain config state with sane defaults so fetch_config() works.
+        let mut kv_state: HashMap<StateKey, StateValue> = HashMap::new();
+
+        // 0x1::chain_id::ChainId
+        if let Ok(state_key) = aptos_types::state_store::state_key::StateKey::on_chain_config::<ChainId>() {
+            let bytes = bcs::to_bytes(&chain_id).expect("serialize ChainId");
+            kv_state.insert(state_key, StateValue::new_legacy(bytes.into()));
+        }
+
+        // 0x1::aptos_features::Features
+        if let Ok(state_key) = aptos_types::state_store::state_key::StateKey::on_chain_config::<Features>() {
+            let bytes = bcs::to_bytes(&features).expect("serialize Features");
+            kv_state.insert(state_key, StateValue::new_legacy(bytes.into()));
+        }
         Self {
-            kv_state: HashMap::new(),
+            kv_state,
             tables: HashMap::new(),
             modules: HashMap::new(),
             scripts_deser: DashMap::new(),
             scripts_verified: DashMap::new(),
-            runtime_environment: RuntimeEnvironment::new(vec![]),
+            runtime_environment,
         }
+    }
+
+    pub fn default_env() -> aptos_vm_environment::environment::AptosEnvironment {
+        // Build a temporary default state, and wrap it into a minimal StateView for env init.
+        let tmp = Self::new_default();
+
+        struct DefaultStateView<'a> {
+            state: &'a AptosCustomState,
+        }
+
+        impl<'a> aptos_types::state_store::TStateView for DefaultStateView<'a> {
+            type Key = StateKey;
+
+            fn get_usage(
+                &self,
+            ) -> aptos_types::state_store::StateViewResult<StateStorageUsage> {
+                Ok(StateStorageUsage::Untracked)
+            }
+
+            fn get_state_value(
+                &self,
+                state_key: &StateKey,
+            ) -> aptos_types::state_store::StateViewResult<Option<StateValue>> {
+                Ok(self.state.kv_state.get(state_key).cloned())
+            }
+        }
+
+        let view = DefaultStateView { state: &tmp };
+        aptos_vm_environment::environment::AptosEnvironment::new(&view)
     }
 
     pub fn id(&self) -> StateViewId {

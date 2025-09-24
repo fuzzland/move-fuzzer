@@ -111,6 +111,8 @@ aptos-config = { path = "./external/aptos-core/config" }
 aptos-crypto = { path = "./external/aptos-core/crates/aptos-crypto" }
 aptos-db = { path = "./external/aptos-core/storage/aptosdb" }
 aptos-executor = { path = "./external/aptos-core/execution/executor" }
+aptos-gas-schedule = { path = "./external/aptos-core/aptos-move/aptos-gas-schedule" }
+aptos-native-interface = { path = "./external/aptos-core/aptos-move/aptos-native-interface" }
 aptos-storage-interface = { path = "./external/aptos-core/storage/storage-interface" }
 aptos-types = { path = "./external/aptos-core/types" }
 aptos-vm = { path = "./external/aptos-core/aptos-move/aptos-vm" }
