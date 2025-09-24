@@ -1,20 +1,8 @@
 use std::marker::PhantomData;
 
 use anyhow::Result;
-use aptos_move_core_types::account_address::AccountAddress;
-use aptos_move_core_types::identifier::IdentStr;
-use aptos_move_core_types::language_storage::TypeTag;
-use aptos_move_core_types::value::{self, MoveValue};
-use aptos_move_vm_runtime::move_vm::SerializedReturnValues;
-use aptos_move_vm_runtime::{LegacyLoaderConfig, ScriptLoader};
-use aptos_move_vm_types::gas::UnmeteredGasMeter;
-use aptos_types::chain_id::ChainId;
-use aptos_types::transaction::authenticator::TransactionAuthenticator;
-use aptos_types::transaction::{RawTransaction, SignedTransaction, TransactionPayload};
-use aptos_vm::move_vm_ext::SessionId;
+use aptos_types::transaction::TransactionPayload;
 use aptos_vm::AptosVM;
-use aptos_vm_types::module_write_set::ModuleWriteSet;
-use aptos_vm_types::storage::change_set_configs::ChangeSetConfigs;
 use libafl::executors::{Executor, ExitKind, HasObservers};
 use libafl_bolts::tuples::RefIndexable;
 
@@ -71,13 +59,13 @@ impl<EM, Z> Executor<EM, AptosFuzzerInput, AptosFuzzerState, Z> for AptosMoveExe
         mgr: &mut EM,
         input: &AptosFuzzerInput,
     ) -> Result<ExitKind, libafl::Error> {
-        let result = self.execute_transaction(input.transaction, state.aptos_state);
+        let result = self.execute_transaction(input.payload().clone(), state.aptos_state());
         match result {
             Ok(result) => {
-                Ok(ExitKind::Success)
+                Ok(ExitKind::Ok)
             }
             Err(e) => {
-                Err(libafl::Error::TargetError(e))
+                Err(libafl::Error::shutting_down())
             }
         }
     }

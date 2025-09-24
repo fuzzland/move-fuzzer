@@ -21,6 +21,8 @@ aptos-move-core-types = { workspace = true }
 aptos-move-binary-format = { workspace = true }
 aptos-move-vm-types = { workspace = true }
 aptos-move-vm-runtime = { workspace = true }
+aptos-native-interface = { workspace = true }
+aptos-gas-schedule = { workspace = true }
 bytes = { workspace = true }
 
 libafl = { workspace = true }
