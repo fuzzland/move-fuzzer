@@ -391,6 +391,9 @@ impl AptosFuzzerState {
                 continue;
             }
 
+            eprintln!("[aptos-fuzzer] creating payload for {}::{} at address {}", 
+                     abi.module_name().name(), abi.name(), abi.module_name().address());
+            
             let entry = AptosEntryFunction::new(abi.module_name().clone(), identifier, Vec::new(), arg_bytes);
             payloads.push(TransactionPayload::EntryFunction(entry));
         }
@@ -434,6 +437,10 @@ impl AptosFuzzerState {
             }
         };
 
-        Some((module.self_id(), bytes))
+        let module_id = module.self_id();
+        eprintln!("[aptos-fuzzer] loaded module: {} at address {}", 
+                 module_id.name(), module_id.address());
+
+        Some((module_id, bytes))
     }
 }

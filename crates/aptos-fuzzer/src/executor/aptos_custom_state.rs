@@ -321,7 +321,9 @@ impl ModuleStorage for AptosCustomState {
     #[doc = " Note: this API is not metered!"]
     fn unmetered_check_module_exists(&self, address: &AccountAddress, module_name: &IdentStr) -> VMResult<bool> {
         let module_id = ModuleId::new(*address, module_name.to_owned());
-        Ok(self.modules.contains_key(&module_id))
+        let exists = self.modules.contains_key(&module_id);
+        eprintln!("[aptos-fuzzer] checking module {}::{} -> {}", address, module_name, exists);
+        Ok(exists)
     }
 
     #[doc = " Returns module bytes if module exists, or [None] otherwise. An error is returned if there"]
@@ -330,7 +332,14 @@ impl ModuleStorage for AptosCustomState {
     #[doc = " Note: this API is not metered!"]
     fn unmetered_get_module_bytes(&self, address: &AccountAddress, module_name: &IdentStr) -> VMResult<Option<Bytes>> {
         let module_id = ModuleId::new(*address, module_name.to_owned());
-        Ok(self.modules.get(&module_id).cloned())
+        let result = self.modules.get(&module_id).cloned();
+        eprintln!("[aptos-fuzzer] get_module_bytes {}::{} -> {}", 
+                 address, module_name, result.is_some());
+        if result.is_none() {
+            eprintln!("[aptos-fuzzer] available modules: {:?}", 
+                     self.modules.keys().collect::<Vec<_>>());
+        }
+        Ok(result)
     }
 
     #[doc = " Returns the size of a module in bytes, or [None] otherwise. An error is returned if the"]
@@ -471,6 +480,12 @@ impl WithRuntimeEnvironment for AptosCustomState {
     }
 }
 
+impl AptosCustomState {
+    pub fn runtime_environment(&self) -> &RuntimeEnvironment {
+        &self.runtime_environment
+    }
+}
+
 impl Default for AptosCustomState {
     fn default() -> Self {
         Self::new_default()
@@ -539,30 +554,8 @@ impl AptosCustomState {
     }
 
     pub fn default_env() -> aptos_vm_environment::environment::AptosEnvironment {
-        // Build a temporary default state, and wrap it into a minimal StateView for env
-        // init.
         let tmp = Self::new_default();
-
-        struct DefaultStateView<'a> {
-            state: &'a AptosCustomState,
-        }
-
-        impl<'a> aptos_types::state_store::TStateView for DefaultStateView<'a> {
-            type Key = StateKey;
-
-            fn get_usage(&self) -> aptos_types::state_store::StateViewResult<StateStorageUsage> {
-                Ok(StateStorageUsage::Untracked)
-            }
-
-            fn get_state_value(
-                &self,
-                state_key: &StateKey,
-            ) -> aptos_types::state_store::StateViewResult<Option<StateValue>> {
-                Ok(self.state.kv_state.get(state_key).cloned())
-            }
-        }
-
-        let view = DefaultStateView { state: &tmp };
+        let view = crate::executor::custom_state_view::CustomStateView::new(&tmp);
         aptos_vm_environment::environment::AptosEnvironment::new(&view)
     }
 
@@ -629,7 +622,13 @@ impl AptosCustomState {
     pub fn deploy_module_bytes(&mut self, module_id: ModuleId, code: Vec<u8>) {
         let bytes = Bytes::from(code);
         let state_key = StateKey::module(module_id.address(), module_id.name());
+        
+        eprintln!("[aptos-fuzzer] deploying module {} at address {} (key: {:?})", 
+                 module_id.name(), module_id.address(), state_key);
+        
         self.modules.insert(module_id.clone(), bytes.clone());
         self.kv_state.insert(state_key, StateValue::new_legacy(bytes));
+        
+        eprintln!("[aptos-fuzzer] module deployed. Total modules: {}", self.modules.len());
     }
 }
