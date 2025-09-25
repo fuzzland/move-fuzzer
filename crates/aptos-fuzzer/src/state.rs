@@ -13,7 +13,8 @@ use libafl::{HasMetadata, HasNamedMetadata};
 use libafl_bolts::rands::StdRand;
 use libafl_bolts::serdeany::{NamedSerdeAnyMap, SerdeAnyMap};
 
-use aptos_types::transaction::EntryFunctionABI;
+use aptos_types::transaction::{EntryFunction as AptosEntryFunction, EntryFunctionABI, TransactionPayload};
+use aptos_move_core_types::{account_address::AccountAddress, identifier::Identifier, language_storage::TypeTag, u256::U256};
 
 use crate::executor::aptos_custom_state::AptosCustomState;
 use crate::input::AptosFuzzerInput;
@@ -54,8 +55,8 @@ pub struct AptosFuzzerState {
 
 impl AptosFuzzerState {
     pub fn new() -> Self {
-        let (entry_abi_paths, entry_abis) = Self::load_abis_from_args();
-        let state = Self {
+        let entry_abis = Self::load_abis_from_args();
+        let mut state = Self {
             // TODO: replace me with actual aptos state
             aptos_state: AptosCustomState::new_default(),
             rand: StdRand::new(),
@@ -74,76 +75,17 @@ impl AptosFuzzerState {
         };
 
         // TODO: deploy code (toml/json?)
-        // TODO: init corpus w/ static analysis and abi.json
+        for payload in Self::padding_abis(entry_abis) {
+            let input = AptosFuzzerInput::new(payload);
+            if let Err(err) = state
+                .corpus
+                .add(Testcase::new(input))
+            {
+                eprintln!("[aptos-fuzzer] failed to seed ABI payload: {err}");
+            }
+        }
 
         state
-    }
-
-    fn load_abis_from_args() -> (Vec<PathBuf>, Vec<EntryFunctionABI>) {
-        let Some(path_arg) = env::args().nth(1) else {
-            return (Vec::new(), Vec::new());
-        };
-
-        let mut paths = Vec::new();
-        let mut abis = Vec::new();
-        Self::collect_abis(Path::new(&path_arg), &mut paths, &mut abis);
-
-        if paths.is_empty() {
-            eprintln!("[aptos-fuzzer] no ABI files found under {path_arg}");
-        } else {
-            eprintln!(
-                "[aptos-fuzzer] loaded {} ABI file(s) from {path_arg}",
-                paths.len()
-            );
-        }
-
-        (paths, abis)
-    }
-
-    fn collect_abis(path: &Path, paths: &mut Vec<PathBuf>, abis: &mut Vec<EntryFunctionABI>) {
-        if path.is_dir() {
-            let read_dir = match fs::read_dir(path) {
-                Ok(rd) => rd,
-                Err(err) => {
-                    eprintln!("[aptos-fuzzer] failed to read directory {}: {err}", path.display());
-                    return;
-                }
-            };
-            for entry in read_dir {
-                match entry {
-                    Ok(dir_entry) => Self::collect_abis(&dir_entry.path(), paths, abis),
-                    Err(err) => eprintln!(
-                        "[aptos-fuzzer] failed to read entry in {}: {err}",
-                        path.display()
-                    ),
-                }
-            }
-            return;
-        }
-
-        if path.extension().map(|ext| ext != "abi").unwrap_or(true) {
-            return;
-        }
-
-        let bytes = match fs::read(path) {
-            Ok(bytes) => bytes,
-            Err(err) => {
-                eprintln!("[aptos-fuzzer] failed to read ABI file {}: {err}", path.display());
-                return;
-            }
-        };
-        match bcs::from_bytes::<EntryFunctionABI>(&bytes) {
-            Ok(abi) => {
-                paths.push(path.to_path_buf());
-                abis.push(abi);
-            }
-            Err(err) => {
-                eprintln!(
-                    "[aptos-fuzzer] failed to decode ABI at {}: {err}. Expected BCS-encoded EntryFunctionABI",
-                    path.display()
-                );
-            }
-        }
     }
 
     pub fn aptos_state(&self) -> &AptosCustomState {
@@ -322,3 +264,148 @@ impl HasStartTime for AptosFuzzerState {
     }
 }
 
+impl AptosFuzzerState {
+    fn load_abis_from_args() -> Vec<EntryFunctionABI> {
+        let Some(path_arg) = env::args().nth(1) else {
+            return Vec::new();
+        };
+
+        let mut paths = Vec::new();
+        let mut abis = Vec::new();
+        Self::collect_abis(Path::new(&path_arg), &mut paths, &mut abis);
+
+        if paths.is_empty() {
+            eprintln!("[aptos-fuzzer] no ABI files found under {path_arg}");
+        } else {
+            eprintln!(
+                "[aptos-fuzzer] loaded {} ABI file(s) from {path_arg}",
+                paths.len()
+            );
+        }
+
+        abis
+    }
+
+    fn collect_abis(path: &Path, paths: &mut Vec<PathBuf>, abis: &mut Vec<EntryFunctionABI>) {
+        if path.is_dir() {
+            let read_dir = match fs::read_dir(path) {
+                Ok(rd) => rd,
+                Err(err) => {
+                    eprintln!("[aptos-fuzzer] failed to read directory {}: {err}", path.display());
+                    return;
+                }
+            };
+            for entry in read_dir {
+                match entry {
+                    Ok(dir_entry) => Self::collect_abis(&dir_entry.path(), paths, abis),
+                    Err(err) => eprintln!(
+                        "[aptos-fuzzer] failed to read entry in {}: {err}",
+                        path.display()
+                    ),
+                }
+            }
+            return;
+        }
+
+        if path.extension().map(|ext| ext != "abi").unwrap_or(true) {
+            return;
+        }
+
+        let bytes = match fs::read(path) {
+            Ok(bytes) => bytes,
+            Err(err) => {
+                eprintln!("[aptos-fuzzer] failed to read ABI file {}: {err}", path.display());
+                return;
+            }
+        };
+        match bcs::from_bytes::<EntryFunctionABI>(&bytes) {
+            Ok(abi) => {
+                paths.push(path.to_path_buf());
+                abis.push(abi);
+            }
+            Err(err) => {
+                eprintln!(
+                    "[aptos-fuzzer] failed to decode ABI at {}: {err}. Expected BCS-encoded EntryFunctionABI",
+                    path.display()
+                );
+            }
+        }
+    }
+
+    fn padding_abis(abis: Vec<EntryFunctionABI>) -> Vec<TransactionPayload> {
+        let mut payloads = Vec::new();
+
+        for abi in abis {
+            if !abi.ty_args().is_empty() {
+                eprintln!(
+                    "[aptos-fuzzer] skipping {}::{}: ty_args not supported",
+                    abi.module_name(),
+                    abi.name()
+                );
+                continue;
+            }
+
+            let identifier = match Identifier::new(abi.name()) {
+                Ok(id) => id,
+                Err(err) => {
+                    eprintln!(
+                        "[aptos-fuzzer] invalid function name {}: {err}",
+                        abi.name()
+                    );
+                    continue;
+                }
+            };
+
+            let mut arg_bytes = Vec::new();
+            let mut unsupported = false;
+
+            for arg in abi.args() {
+                match Self::default_arg_bytes(arg.type_tag()) {
+                    Some(bytes) => arg_bytes.push(bytes),
+                    None => {
+                        unsupported = true;
+                        eprintln!(
+                            "[aptos-fuzzer] skipping {}::{}: unsupported argument type {:?}",
+                            abi.module_name(),
+                            abi.name(),
+                            arg.type_tag()
+                        );
+                        break;
+                    }
+                }
+            }
+
+            if unsupported {
+                continue;
+            }
+
+            let entry = AptosEntryFunction::new(
+                abi.module_name().clone(),
+                identifier,
+                Vec::new(),
+                arg_bytes,
+            );
+            payloads.push(TransactionPayload::EntryFunction(entry));
+        }
+
+        payloads
+    }
+
+    fn default_arg_bytes(type_tag: &TypeTag) -> Option<Vec<u8>> {
+        match type_tag {
+            TypeTag::Bool => bcs::to_bytes(&false).ok(),
+            TypeTag::U8 => bcs::to_bytes(&0u8).ok(),
+            TypeTag::U16 => bcs::to_bytes(&0u16).ok(),
+            TypeTag::U32 => bcs::to_bytes(&0u32).ok(),
+            TypeTag::U64 => bcs::to_bytes(&0u64).ok(),
+            TypeTag::U128 => bcs::to_bytes(&0u128).ok(),
+            TypeTag::U256 => bcs::to_bytes(&U256::from(0u8)).ok(),
+            TypeTag::Address => bcs::to_bytes(&AccountAddress::ZERO).ok(),
+            TypeTag::Vector(inner) => match &**inner {
+                TypeTag::U8 => bcs::to_bytes::<Vec<u8>>(&Vec::new()).ok(),
+                _ => None,
+            },
+            _ => None,
+        }
+    }
+}
