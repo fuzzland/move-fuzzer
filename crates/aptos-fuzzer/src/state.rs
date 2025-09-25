@@ -8,7 +8,7 @@ use aptos_move_core_types::account_address::AccountAddress;
 use aptos_move_core_types::identifier::Identifier;
 use aptos_move_core_types::language_storage::{ModuleId, TypeTag};
 use aptos_move_core_types::u256::U256;
-use aptos_types::transaction::{EntryFunction as AptosEntryFunction, EntryFunctionABI, TransactionPayload};
+use aptos_types::transaction::{EntryFunction as AptosEntryFunction, EntryFunctionABI, EntryABI, TransactionPayload};
 use libafl::corpus::{Corpus, CorpusId, HasCurrentCorpusId, HasTestcase, InMemoryCorpus, Testcase};
 use libafl::stages::StageId;
 use libafl::state::{
@@ -316,16 +316,33 @@ impl AptosFuzzerState {
                 return;
             }
         };
-        match bcs::from_bytes::<EntryFunctionABI>(&bytes) {
-            Ok(abi) => {
-                paths.push(path.to_path_buf());
-                abis.push(abi);
+        // Try to decode as EntryABI first (new format from aptos move compile)
+        match bcs::from_bytes::<EntryABI>(&bytes) {
+            Ok(entry_abi) => {
+                if let EntryABI::EntryFunction(abi) = entry_abi {
+                    paths.push(path.to_path_buf());
+                    abis.push(abi);
+                } else {
+                    eprintln!(
+                        "[aptos-fuzzer] skipping {}: TransactionScript ABIs not supported yet",
+                        path.display()
+                    );
+                }
             }
-            Err(err) => {
-                eprintln!(
-                    "[aptos-fuzzer] failed to decode ABI at {}: {err}. Expected BCS-encoded EntryFunctionABI",
-                    path.display()
-                );
+            Err(_) => {
+                // Fallback: try to decode as EntryFunctionABI directly (legacy format)
+                match bcs::from_bytes::<EntryFunctionABI>(&bytes) {
+                    Ok(abi) => {
+                        paths.push(path.to_path_buf());
+                        abis.push(abi);
+                    }
+                    Err(err) => {
+                        eprintln!(
+                            "[aptos-fuzzer] failed to decode ABI at {}: {err}. Expected BCS-encoded EntryABI or EntryFunctionABI",
+                            path.display()
+                        );
+                    }
+                }
             }
         }
     }
