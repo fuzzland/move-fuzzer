@@ -1,5 +1,7 @@
 use std::cell::{Ref, RefMut};
+use std::path::{Path, PathBuf};
 use std::time::Duration;
+use std::{env, fs};
 
 use libafl::corpus::{Corpus, CorpusId, HasCurrentCorpusId, HasTestcase, InMemoryCorpus, Testcase};
 use libafl::stages::StageId;
@@ -10,6 +12,8 @@ use libafl::state::{
 use libafl::{HasMetadata, HasNamedMetadata};
 use libafl_bolts::rands::StdRand;
 use libafl_bolts::serdeany::{NamedSerdeAnyMap, SerdeAnyMap};
+
+use aptos_types::transaction::EntryFunctionABI;
 
 use crate::executor::aptos_custom_state::AptosCustomState;
 use crate::input::AptosFuzzerInput;
@@ -50,6 +54,7 @@ pub struct AptosFuzzerState {
 
 impl AptosFuzzerState {
     pub fn new() -> Self {
+        let (entry_abi_paths, entry_abis) = Self::load_abis_from_args();
         let state = Self {
             // TODO: replace me with actual aptos state
             aptos_state: AptosCustomState::new_default(),
@@ -72,6 +77,73 @@ impl AptosFuzzerState {
         // TODO: init corpus w/ static analysis and abi.json
 
         state
+    }
+
+    fn load_abis_from_args() -> (Vec<PathBuf>, Vec<EntryFunctionABI>) {
+        let Some(path_arg) = env::args().nth(1) else {
+            return (Vec::new(), Vec::new());
+        };
+
+        let mut paths = Vec::new();
+        let mut abis = Vec::new();
+        Self::collect_abis(Path::new(&path_arg), &mut paths, &mut abis);
+
+        if paths.is_empty() {
+            eprintln!("[aptos-fuzzer] no ABI files found under {path_arg}");
+        } else {
+            eprintln!(
+                "[aptos-fuzzer] loaded {} ABI file(s) from {path_arg}",
+                paths.len()
+            );
+        }
+
+        (paths, abis)
+    }
+
+    fn collect_abis(path: &Path, paths: &mut Vec<PathBuf>, abis: &mut Vec<EntryFunctionABI>) {
+        if path.is_dir() {
+            let read_dir = match fs::read_dir(path) {
+                Ok(rd) => rd,
+                Err(err) => {
+                    eprintln!("[aptos-fuzzer] failed to read directory {}: {err}", path.display());
+                    return;
+                }
+            };
+            for entry in read_dir {
+                match entry {
+                    Ok(dir_entry) => Self::collect_abis(&dir_entry.path(), paths, abis),
+                    Err(err) => eprintln!(
+                        "[aptos-fuzzer] failed to read entry in {}: {err}",
+                        path.display()
+                    ),
+                }
+            }
+            return;
+        }
+
+        if path.extension().map(|ext| ext != "abi").unwrap_or(true) {
+            return;
+        }
+
+        let bytes = match fs::read(path) {
+            Ok(bytes) => bytes,
+            Err(err) => {
+                eprintln!("[aptos-fuzzer] failed to read ABI file {}: {err}", path.display());
+                return;
+            }
+        };
+        match bcs::from_bytes::<EntryFunctionABI>(&bytes) {
+            Ok(abi) => {
+                paths.push(path.to_path_buf());
+                abis.push(abi);
+            }
+            Err(err) => {
+                eprintln!(
+                    "[aptos-fuzzer] failed to decode ABI at {}: {err}. Expected BCS-encoded EntryFunctionABI",
+                    path.display()
+                );
+            }
+        }
     }
 
     pub fn aptos_state(&self) -> &AptosCustomState {
@@ -249,3 +321,4 @@ impl HasStartTime for AptosFuzzerState {
         &mut self.start_time
     }
 }
+
