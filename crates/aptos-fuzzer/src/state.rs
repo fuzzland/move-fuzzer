@@ -391,6 +391,15 @@ impl AptosFuzzerState {
                 continue;
             }
 
+            while arg_bytes.len() < abi.args().len() {
+                // Fallback to empty vector<u8> if some type was not covered
+                if let Some(bytes) = bcs::to_bytes::<Vec<u8>>(&Vec::new()).ok() {
+                    arg_bytes.push(bytes);
+                } else {
+                    break;
+                }
+            }
+
             eprintln!("[aptos-fuzzer] creating payload for {}::{} at address {}", 
                      abi.module_name().name(), abi.name(), abi.module_name().address());
             
@@ -412,7 +421,14 @@ impl AptosFuzzerState {
             TypeTag::U256 => bcs::to_bytes(&U256::from(0u8)).ok(),
             TypeTag::Address => bcs::to_bytes(&AccountAddress::ZERO).ok(),
             TypeTag::Vector(inner) => match &**inner {
+                TypeTag::Bool => bcs::to_bytes::<Vec<bool>>(&Vec::new()).ok(),
                 TypeTag::U8 => bcs::to_bytes::<Vec<u8>>(&Vec::new()).ok(),
+                TypeTag::U16 => bcs::to_bytes::<Vec<u16>>(&Vec::new()).ok(),
+                TypeTag::U32 => bcs::to_bytes::<Vec<u32>>(&Vec::new()).ok(),
+                TypeTag::U64 => bcs::to_bytes::<Vec<u64>>(&Vec::new()).ok(),
+                TypeTag::U128 => bcs::to_bytes::<Vec<u128>>(&Vec::new()).ok(),
+                TypeTag::U256 => bcs::to_bytes::<Vec<U256>>(&Vec::new()).ok(),
+                TypeTag::Address => bcs::to_bytes::<Vec<AccountAddress>>(&Vec::new()).ok(),
                 _ => None,
             },
             _ => None,
