@@ -4,6 +4,7 @@ use std::sync::Arc;
 use aptos_aggregator::bounded_math::SignedU128;
 use aptos_aggregator::resolver::{TAggregatorV1View, TDelayedFieldView};
 use aptos_aggregator::types::{DelayedFieldValue, DelayedFieldsSpeculativeError};
+use aptos_gas_schedule::{MiscGasParameters, NativeGasParameters};
 use aptos_move_binary_format::errors::{PartialVMError, PartialVMResult, VMResult};
 use aptos_move_binary_format::file_format::CompiledScript;
 use aptos_move_binary_format::CompiledModule;
@@ -14,17 +15,13 @@ use aptos_move_core_types::metadata::Metadata;
 use aptos_move_core_types::value::MoveTypeLayout;
 use aptos_move_table_extension::{TableHandle, TableResolver};
 use aptos_move_vm_runtime::{Module, ModuleStorage, RuntimeEnvironment, Script, WithRuntimeEnvironment};
-use aptos_native_interface::SafeNativeBuilder;
-use aptos_types::chain_id::ChainId;
-use aptos_types::on_chain_config::{Features, TimedFeaturesBuilder};
-use aptos_vm_environment::natives::aptos_natives_with_builder;
-use aptos_vm_environment::prod_configs::{aptos_default_ty_builder, aptos_prod_vm_config};
-use aptos_gas_schedule::{MiscGasParameters, NativeGasParameters};
 use aptos_move_vm_types::code::{Code, ScriptCache};
 use aptos_move_vm_types::delayed_values::delayed_field_id::DelayedFieldID;
 use aptos_move_vm_types::resolver::ResourceResolver;
+use aptos_native_interface::SafeNativeBuilder;
+use aptos_types::chain_id::ChainId;
 use aptos_types::error::{PanicError, PanicOr};
-use aptos_types::on_chain_config::ConfigStorage;
+use aptos_types::on_chain_config::{ConfigStorage, Features, TimedFeaturesBuilder};
 use aptos_types::state_store::errors::StateViewError;
 use aptos_types::state_store::state_key::inner::StateKeyInner;
 use aptos_types::state_store::state_key::StateKey;
@@ -33,6 +30,8 @@ use aptos_types::state_store::state_value::{StateValue, StateValueMetadata};
 use aptos_types::state_store::StateViewId;
 use aptos_types::write_set::{TransactionWrite, WriteSet};
 use aptos_vm::move_vm_ext::{AptosMoveResolver, AsExecutorView, AsResourceGroupView, ResourceGroupResolver};
+use aptos_vm_environment::natives::aptos_natives_with_builder;
+use aptos_vm_environment::prod_configs::{aptos_default_ty_builder, aptos_prod_vm_config};
 use aptos_vm_types::module_and_script_storage::module_storage::AptosModuleStorage;
 use aptos_vm_types::resolver::{
     BlockSynchronizationKillSwitch, ExecutorView, ResourceGroupSize, ResourceGroupView, StateStorageView,
@@ -492,8 +491,8 @@ impl std::fmt::Debug for AptosCustomState {
 
 impl AptosCustomState {
     pub fn new_default() -> Self {
-        // Build a minimal Aptos-like runtime environment (natives + VM config).
-        // This mirrors aptos-core's AptosEnvironment defaults when on-chain configs are missing.
+        // This mirrors aptos-core's AptosEnvironment defaults when on-chain configs are
+        // missing.
         let chain_id = ChainId::test();
         let features = Features::default();
         let timed_features = TimedFeaturesBuilder::new(chain_id, 0).build();
@@ -515,7 +514,7 @@ impl AptosCustomState {
         );
         let runtime_environment = RuntimeEnvironment::new_with_config(natives, vm_config);
 
-        // Seed essential on-chain config state with sane defaults so fetch_config() works.
+        // Seed essential on-chain config state with sane defaults works.
         let mut kv_state: HashMap<StateKey, StateValue> = HashMap::new();
 
         // 0x1::chain_id::ChainId
@@ -540,7 +539,8 @@ impl AptosCustomState {
     }
 
     pub fn default_env() -> aptos_vm_environment::environment::AptosEnvironment {
-        // Build a temporary default state, and wrap it into a minimal StateView for env init.
+        // Build a temporary default state, and wrap it into a minimal StateView for env
+        // init.
         let tmp = Self::new_default();
 
         struct DefaultStateView<'a> {
@@ -550,9 +550,7 @@ impl AptosCustomState {
         impl<'a> aptos_types::state_store::TStateView for DefaultStateView<'a> {
             type Key = StateKey;
 
-            fn get_usage(
-                &self,
-            ) -> aptos_types::state_store::StateViewResult<StateStorageUsage> {
+            fn get_usage(&self) -> aptos_types::state_store::StateViewResult<StateStorageUsage> {
                 Ok(StateStorageUsage::Untracked)
             }
 
@@ -626,5 +624,12 @@ impl AptosCustomState {
                 },
             }
         }
+    }
+
+    pub fn deploy_module_bytes(&mut self, module_id: ModuleId, code: Vec<u8>) {
+        let bytes = Bytes::from(code);
+        let state_key = StateKey::module(module_id.address(), module_id.name());
+        self.modules.insert(module_id.clone(), bytes.clone());
+        self.kv_state.insert(state_key, StateValue::new_legacy(bytes));
     }
 }

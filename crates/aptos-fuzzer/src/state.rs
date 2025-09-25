@@ -3,6 +3,12 @@ use std::path::{Path, PathBuf};
 use std::time::Duration;
 use std::{env, fs};
 
+use aptos_move_binary_format::CompiledModule;
+use aptos_move_core_types::account_address::AccountAddress;
+use aptos_move_core_types::identifier::Identifier;
+use aptos_move_core_types::language_storage::{ModuleId, TypeTag};
+use aptos_move_core_types::u256::U256;
+use aptos_types::transaction::{EntryFunction as AptosEntryFunction, EntryFunctionABI, TransactionPayload};
 use libafl::corpus::{Corpus, CorpusId, HasCurrentCorpusId, HasTestcase, InMemoryCorpus, Testcase};
 use libafl::stages::StageId;
 use libafl::state::{
@@ -12,9 +18,6 @@ use libafl::state::{
 use libafl::{HasMetadata, HasNamedMetadata};
 use libafl_bolts::rands::StdRand;
 use libafl_bolts::serdeany::{NamedSerdeAnyMap, SerdeAnyMap};
-
-use aptos_types::transaction::{EntryFunction as AptosEntryFunction, EntryFunctionABI, TransactionPayload};
-use aptos_move_core_types::{account_address::AccountAddress, identifier::Identifier, language_storage::TypeTag, u256::U256};
 
 use crate::executor::aptos_custom_state::AptosCustomState;
 use crate::input::AptosFuzzerInput;
@@ -56,6 +59,7 @@ pub struct AptosFuzzerState {
 impl AptosFuzzerState {
     pub fn new() -> Self {
         let entry_abis = Self::load_abis_from_args();
+        let module_bytes = Self::load_module_from_args();
         let mut state = Self {
             // TODO: replace me with actual aptos state
             aptos_state: AptosCustomState::new_default(),
@@ -74,13 +78,13 @@ impl AptosFuzzerState {
             stage_stack: StageStack::default(),
         };
 
-        // TODO: deploy code (toml/json?)
+        if let Some((module_id, code)) = module_bytes {
+            state.aptos_state.deploy_module_bytes(module_id, code);
+        }
+
         for payload in Self::padding_abis(entry_abis) {
             let input = AptosFuzzerInput::new(payload);
-            if let Err(err) = state
-                .corpus
-                .add(Testcase::new(input))
-            {
+            if let Err(err) = state.corpus.add(Testcase::new(input)) {
                 eprintln!("[aptos-fuzzer] failed to seed ABI payload: {err}");
             }
         }
@@ -277,10 +281,7 @@ impl AptosFuzzerState {
         if paths.is_empty() {
             eprintln!("[aptos-fuzzer] no ABI files found under {path_arg}");
         } else {
-            eprintln!(
-                "[aptos-fuzzer] loaded {} ABI file(s) from {path_arg}",
-                paths.len()
-            );
+            eprintln!("[aptos-fuzzer] loaded {} ABI file(s) from {path_arg}", paths.len());
         }
 
         abis
@@ -298,10 +299,7 @@ impl AptosFuzzerState {
             for entry in read_dir {
                 match entry {
                     Ok(dir_entry) => Self::collect_abis(&dir_entry.path(), paths, abis),
-                    Err(err) => eprintln!(
-                        "[aptos-fuzzer] failed to read entry in {}: {err}",
-                        path.display()
-                    ),
+                    Err(err) => eprintln!("[aptos-fuzzer] failed to read entry in {}: {err}", path.display()),
                 }
             }
             return;
@@ -348,10 +346,7 @@ impl AptosFuzzerState {
             let identifier = match Identifier::new(abi.name()) {
                 Ok(id) => id,
                 Err(err) => {
-                    eprintln!(
-                        "[aptos-fuzzer] invalid function name {}: {err}",
-                        abi.name()
-                    );
+                    eprintln!("[aptos-fuzzer] invalid function name {}: {err}", abi.name());
                     continue;
                 }
             };
@@ -379,12 +374,7 @@ impl AptosFuzzerState {
                 continue;
             }
 
-            let entry = AptosEntryFunction::new(
-                abi.module_name().clone(),
-                identifier,
-                Vec::new(),
-                arg_bytes,
-            );
+            let entry = AptosEntryFunction::new(abi.module_name().clone(), identifier, Vec::new(), arg_bytes);
             payloads.push(TransactionPayload::EntryFunction(entry));
         }
 
@@ -407,5 +397,26 @@ impl AptosFuzzerState {
             },
             _ => None,
         }
+    }
+
+    fn load_module_from_args() -> Option<(ModuleId, Vec<u8>)> {
+        let path = env::args().nth(2)?;
+        let bytes = match fs::read(&path) {
+            Ok(bytes) => bytes,
+            Err(err) => {
+                eprintln!("[aptos-fuzzer] failed to read module from {path}: {err}");
+                return None;
+            }
+        };
+
+        let module = match CompiledModule::deserialize(bytes.as_slice()) {
+            Ok(module) => module,
+            Err(err) => {
+                eprintln!("[aptos-fuzzer] failed to deserialize module {path}: {err}");
+                return None;
+            }
+        };
+
+        Some((module.self_id(), bytes))
     }
 }

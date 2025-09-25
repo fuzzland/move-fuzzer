@@ -28,12 +28,13 @@ impl<EM, Z> AptosMoveExecutor<EM, Z> {
         &self,
         transaction: TransactionPayload,
         state: &AptosCustomState,
+        sender: Option<aptos_move_core_types::account_address::AccountAddress>,
     ) -> Result<TransactionResult> {
         match &transaction {
             TransactionPayload::EntryFunction(_) | TransactionPayload::Script(_) => {
-                let (write_set, events) = self
-                    .aptos_vm
-                    .execute_user_payload_no_checking(state, state, &transaction)?;
+                let (write_set, events) =
+                    self.aptos_vm
+                        .execute_user_payload_no_checking(state, state, &transaction, sender)?;
                 Ok(TransactionResult {
                     status: aptos_types::transaction::TransactionStatus::Keep(
                         aptos_types::vm_status::KeptVMStatus::Executed.into(),
@@ -59,14 +60,10 @@ impl<EM, Z> Executor<EM, AptosFuzzerInput, AptosFuzzerState, Z> for AptosMoveExe
         mgr: &mut EM,
         input: &AptosFuzzerInput,
     ) -> Result<ExitKind, libafl::Error> {
-        let result = self.execute_transaction(input.payload().clone(), state.aptos_state());
+        let result = self.execute_transaction(input.payload().clone(), state.aptos_state(), None);
         match result {
-            Ok(result) => {
-                Ok(ExitKind::Ok)
-            }
-            Err(e) => {
-                Err(libafl::Error::shutting_down())
-            }
+            Ok(result) => Ok(ExitKind::Ok),
+            Err(e) => Err(libafl::Error::shutting_down()),
         }
     }
 }
