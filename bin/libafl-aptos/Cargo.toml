@@ -7,3 +7,4 @@ version.workspace = true
 libafl = { workspace = true }
 libafl_bolts = { workspace = true }
 aptos-fuzzer = { workspace = true }
+clap = { workspace = true }

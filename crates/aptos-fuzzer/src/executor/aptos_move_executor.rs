@@ -7,9 +7,9 @@ use libafl::executors::{Executor, ExitKind, HasObservers};
 use libafl_bolts::tuples::RefIndexable;
 
 use super::aptos_custom_state::AptosCustomState;
+use super::custom_state_view::CustomStateView;
 use super::types::TransactionResult;
 use crate::{AptosFuzzerInput, AptosFuzzerState};
-use super::custom_state_view::CustomStateView;
 
 pub struct AptosMoveExecutor<EM, Z> {
     aptos_vm: AptosVM,
@@ -42,14 +42,12 @@ impl<EM, Z> AptosMoveExecutor<EM, Z> {
             TransactionPayload::EntryFunction(_) | TransactionPayload::Script(_) => {
                 let view = CustomStateView::new(state);
                 // Use the state's runtime environment for code storage
-                let code_storage = aptos_vm_types::module_and_script_storage::AsAptosCodeStorage::as_aptos_code_storage(
-                    &view,
-                    state,
-                );
+                let code_storage =
+                    aptos_vm_types::module_and_script_storage::AsAptosCodeStorage::as_aptos_code_storage(&view, state);
 
-                let (write_set, events) = self
-                    .aptos_vm
-                    .execute_user_payload_no_checking(state, &code_storage, &transaction, sender)?;
+                let (write_set, events) =
+                    self.aptos_vm
+                        .execute_user_payload_no_checking(state, &code_storage, &transaction, sender)?;
                 Ok(TransactionResult {
                     status: aptos_types::transaction::TransactionStatus::Keep(
                         aptos_types::vm_status::KeptVMStatus::Executed.into(),
@@ -92,7 +90,8 @@ impl<EM, Z> Executor<EM, AptosFuzzerInput, AptosFuzzerState, Z> for AptosMoveExe
                 }
                 // Log the error but don't shut down - continue fuzzing
                 eprintln!("[aptos-fuzzer] execution error: {e}");
-                Ok(ExitKind::Ok) // Return Ok to continue fuzzing even with errors
+                Ok(ExitKind::Ok) // Return Ok to continue fuzzing even with
+                                 // errors
             }
         }
     }

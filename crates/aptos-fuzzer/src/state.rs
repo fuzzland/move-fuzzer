@@ -1,14 +1,14 @@
 use std::cell::{Ref, RefMut};
+use std::fs;
 use std::path::{Path, PathBuf};
 use std::time::Duration;
-use std::{env, fs};
 
 use aptos_move_binary_format::CompiledModule;
 use aptos_move_core_types::account_address::AccountAddress;
 use aptos_move_core_types::identifier::Identifier;
 use aptos_move_core_types::language_storage::{ModuleId, TypeTag};
 use aptos_move_core_types::u256::U256;
-use aptos_types::transaction::{EntryFunction as AptosEntryFunction, EntryFunctionABI, EntryABI, TransactionPayload};
+use aptos_types::transaction::{EntryABI, EntryFunction as AptosEntryFunction, EntryFunctionABI, TransactionPayload};
 use libafl::corpus::{Corpus, CorpusId, HasCurrentCorpusId, HasTestcase, InMemoryCorpus, Testcase};
 use libafl::stages::StageId;
 use libafl::state::{
@@ -57,9 +57,9 @@ pub struct AptosFuzzerState {
 }
 
 impl AptosFuzzerState {
-    pub fn new() -> Self {
-        let entry_abis = Self::load_abis_from_args();
-        let module_bytes = Self::load_module_from_args();
+    pub fn new(abi_path: Option<PathBuf>, module_path: Option<PathBuf>) -> Self {
+        let entry_abis = Self::load_abis_from_path(abi_path);
+        let module_bytes = Self::load_module_from_path(module_path);
         let mut state = Self {
             // TODO: replace me with actual aptos state
             aptos_state: AptosCustomState::new_default(),
@@ -98,12 +98,6 @@ impl AptosFuzzerState {
 
     pub fn aptos_state_mut(&mut self) -> &mut AptosCustomState {
         &mut self.aptos_state
-    }
-}
-
-impl Default for AptosFuzzerState {
-    fn default() -> Self {
-        Self::new()
     }
 }
 
@@ -269,19 +263,23 @@ impl HasStartTime for AptosFuzzerState {
 }
 
 impl AptosFuzzerState {
-    fn load_abis_from_args() -> Vec<EntryFunctionABI> {
-        let Some(path_arg) = env::args().nth(1) else {
+    fn load_abis_from_path(path: Option<PathBuf>) -> Vec<EntryFunctionABI> {
+        let Some(path) = path else {
             return Vec::new();
         };
 
         let mut paths = Vec::new();
         let mut abis = Vec::new();
-        Self::collect_abis(Path::new(&path_arg), &mut paths, &mut abis);
+        Self::collect_abis(path.as_path(), &mut paths, &mut abis);
 
         if paths.is_empty() {
-            eprintln!("[aptos-fuzzer] no ABI files found under {path_arg}");
+            eprintln!("[aptos-fuzzer] no ABI files found under {}", path.display());
         } else {
-            eprintln!("[aptos-fuzzer] loaded {} ABI file(s) from {path_arg}", paths.len());
+            eprintln!(
+                "[aptos-fuzzer] loaded {} ABI file(s) from {}",
+                paths.len(),
+                path.display()
+            );
         }
 
         abis
@@ -400,9 +398,13 @@ impl AptosFuzzerState {
                 }
             }
 
-            eprintln!("[aptos-fuzzer] creating payload for {}::{} at address {}", 
-                     abi.module_name().name(), abi.name(), abi.module_name().address());
-            
+            eprintln!(
+                "[aptos-fuzzer] creating payload for {}::{} at address {}",
+                abi.module_name().name(),
+                abi.name(),
+                abi.module_name().address()
+            );
+
             let entry = AptosEntryFunction::new(abi.module_name().clone(), identifier, Vec::new(), arg_bytes);
             payloads.push(TransactionPayload::EntryFunction(entry));
         }
@@ -435,12 +437,12 @@ impl AptosFuzzerState {
         }
     }
 
-    fn load_module_from_args() -> Option<(ModuleId, Vec<u8>)> {
-        let path = env::args().nth(2)?;
+    fn load_module_from_path(path: Option<PathBuf>) -> Option<(ModuleId, Vec<u8>)> {
+        let path = path?;
         let bytes = match fs::read(&path) {
             Ok(bytes) => bytes,
             Err(err) => {
-                eprintln!("[aptos-fuzzer] failed to read module from {path}: {err}");
+                eprintln!("[aptos-fuzzer] failed to read module from {}: {err}", path.display());
                 return None;
             }
         };
@@ -448,14 +450,17 @@ impl AptosFuzzerState {
         let module = match CompiledModule::deserialize(bytes.as_slice()) {
             Ok(module) => module,
             Err(err) => {
-                eprintln!("[aptos-fuzzer] failed to deserialize module {path}: {err}");
+                eprintln!("[aptos-fuzzer] failed to deserialize module {}: {err}", path.display());
                 return None;
             }
         };
 
         let module_id = module.self_id();
-        eprintln!("[aptos-fuzzer] loaded module: {} at address {}", 
-                 module_id.name(), module_id.address());
+        eprintln!(
+            "[aptos-fuzzer] loaded module: {} at address {}",
+            module_id.name(),
+            module_id.address()
+        );
 
         Some((module_id, bytes))
     }

@@ -322,7 +322,10 @@ impl ModuleStorage for AptosCustomState {
     fn unmetered_check_module_exists(&self, address: &AccountAddress, module_name: &IdentStr) -> VMResult<bool> {
         let module_id = ModuleId::new(*address, module_name.to_owned());
         let exists = self.modules.contains_key(&module_id);
-        eprintln!("[aptos-fuzzer] checking module {}::{} -> {}", address, module_name, exists);
+        eprintln!(
+            "[aptos-fuzzer] checking module {}::{} -> {}",
+            address, module_name, exists
+        );
         Ok(exists)
     }
 
@@ -333,11 +336,17 @@ impl ModuleStorage for AptosCustomState {
     fn unmetered_get_module_bytes(&self, address: &AccountAddress, module_name: &IdentStr) -> VMResult<Option<Bytes>> {
         let module_id = ModuleId::new(*address, module_name.to_owned());
         let result = self.modules.get(&module_id).cloned();
-        eprintln!("[aptos-fuzzer] get_module_bytes {}::{} -> {}", 
-                 address, module_name, result.is_some());
+        eprintln!(
+            "[aptos-fuzzer] get_module_bytes {}::{} -> {}",
+            address,
+            module_name,
+            result.is_some()
+        );
         if result.is_none() {
-            eprintln!("[aptos-fuzzer] available modules: {:?}", 
-                     self.modules.keys().collect::<Vec<_>>());
+            eprintln!(
+                "[aptos-fuzzer] available modules: {:?}",
+                self.modules.keys().collect::<Vec<_>>()
+            );
         }
         Ok(result)
     }
@@ -622,13 +631,17 @@ impl AptosCustomState {
     pub fn deploy_module_bytes(&mut self, module_id: ModuleId, code: Vec<u8>) {
         let bytes = Bytes::from(code);
         let state_key = StateKey::module(module_id.address(), module_id.name());
-        
-        eprintln!("[aptos-fuzzer] deploying module {} at address {} (key: {:?})", 
-                 module_id.name(), module_id.address(), state_key);
-        
+
+        eprintln!(
+            "[aptos-fuzzer] deploying module {} at address {} (key: {:?})",
+            module_id.name(),
+            module_id.address(),
+            state_key
+        );
+
         self.modules.insert(module_id.clone(), bytes.clone());
         self.kv_state.insert(state_key, StateValue::new_legacy(bytes));
-        
+
         eprintln!("[aptos-fuzzer] module deployed. Total modules: {}", self.modules.len());
     }
 }

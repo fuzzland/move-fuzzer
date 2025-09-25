@@ -30,5 +30,3 @@ impl<'a> TStateView for CustomStateView<'a> {
         Ok(self.state.get_state_value(state_key))
     }
 }
-
-

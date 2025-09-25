@@ -16,11 +16,11 @@ impl AptosFuzzerMutator {
         if args.is_empty() {
             return false;
         }
-        
+
         // Create new mutated arguments
         let mut new_args = Vec::new();
         let mut mutated = false;
-        
+
         for arg_bytes in args.iter() {
             let mut mutated_arg = arg_bytes.clone();
             if Self::mutate_byte_vector(&mut mutated_arg) {
@@ -28,27 +28,27 @@ impl AptosFuzzerMutator {
             }
             new_args.push(mutated_arg);
         }
-        
+
         if mutated {
             // Reconstruct EntryFunction with mutated args
             let (module, function, ty_args, _) = entry_func.clone().into_inner();
             *entry_func = EntryFunction::new(module, function, ty_args, new_args);
         }
-        
+
         mutated
     }
-    
+
     /// Mutate Script arguments by flipping bits in TransactionArguments
     fn mutate_script_args(script: &mut Script) -> bool {
         let args = script.args();
         if args.is_empty() {
             return false;
         }
-        
+
         // Create new mutated arguments
         let mut new_args = Vec::new();
         let mut mutated = false;
-        
+
         for arg in args.iter() {
             let mut mutated_arg = arg.clone();
             if Self::mutate_transaction_argument(&mut mutated_arg) {
@@ -56,27 +56,28 @@ impl AptosFuzzerMutator {
             }
             new_args.push(mutated_arg);
         }
-        
+
         if mutated {
             // Reconstruct Script with mutated args
             let (code, ty_args, _) = script.clone().into_inner();
             *script = Script::new(code, ty_args, new_args);
         }
-        
+
         mutated
     }
-    
+
     /// Mutate a byte vector by flipping all bits
     fn mutate_byte_vector(bytes: &mut Vec<u8>) -> bool {
-        if bytes.is_empty() {*bytes = vec![0u8; 8]; 
+        if bytes.is_empty() {
+            *bytes = vec![0u8; 8];
         }
-        
+
         for byte in bytes.iter_mut() {
             *byte = !*byte;
         }
         true
     }
-    
+
     /// Mutate a TransactionArgument by flipping bits in its data
     fn mutate_transaction_argument(arg: &mut TransactionArgument) -> bool {
         match arg {
@@ -116,8 +117,7 @@ impl AptosFuzzerMutator {
                 for byte in addr_bytes.iter_mut() {
                     *byte = !*byte;
                 }
-                *addr = aptos_move_core_types::account_address::AccountAddress::try_from(addr_bytes)
-                    .unwrap_or(*addr);
+                *addr = aptos_move_core_types::account_address::AccountAddress::try_from(addr_bytes).unwrap_or(*addr);
                 true
             }
             TransactionArgument::U8Vector(vec) => {
@@ -152,15 +152,11 @@ impl Mutator<AptosFuzzerInput, AptosFuzzerState> for AptosFuzzerMutator {
     ) -> Result<MutationResult, libafl::Error> {
         let payload = input.payload_mut();
         let mutated = match payload {
-            TransactionPayload::EntryFunction(entry_func) => {
-                Self::mutate_entry_function_args(entry_func)
-            }
-            TransactionPayload::Script(script) => {
-                Self::mutate_script_args(script)
-            }
+            TransactionPayload::EntryFunction(entry_func) => Self::mutate_entry_function_args(entry_func),
+            TransactionPayload::Script(script) => Self::mutate_script_args(script),
             _ => false, // Other payload types not supported for current mutator
         };
-        
+
         if mutated {
             Ok(MutationResult::Mutated)
         } else {

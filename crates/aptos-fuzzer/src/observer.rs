@@ -1,7 +1,8 @@
+use std::borrow::Cow;
+
 use libafl::observers::{Observer, ObserverWithHashField};
 use libafl_bolts::{AsSlice, Named};
 use serde::{Deserialize, Serialize};
-use std::borrow::Cow;
 
 use crate::{AptosFuzzerInput, AptosFuzzerState};
 
@@ -9,7 +10,9 @@ use crate::{AptosFuzzerInput, AptosFuzzerState};
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TransactionStatusObserver {
     name: Cow<'static, str>,
-    /// Status map: [success_count_low, success_count_high, error_count_low, error_count_high]
+    /// Status map:
+    /// [success_count_low, success_count_high, error_count_low,
+    /// error_count_high]
     pub status_map: [u8; 4],
     /// Number of successful executions
     pub success_count: u64,
@@ -60,7 +63,7 @@ impl Named for TransactionStatusObserver {
 impl<'a> AsSlice<'a> for TransactionStatusObserver {
     type Entry = u8;
     type SliceRef = &'a [u8];
-    
+
     fn as_slice(&'a self) -> Self::SliceRef {
         &self.status_map
     }
