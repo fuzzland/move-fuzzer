@@ -3,6 +3,8 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 
+use libafl_bolts::rands::Rand;
+
 use aptos_move_binary_format::CompiledModule;
 use aptos_move_core_types::account_address::AccountAddress;
 use aptos_move_core_types::identifier::Identifier;
@@ -54,6 +56,7 @@ pub struct AptosFuzzerState {
 
     /// Aptos specific fields
     aptos_state: AptosCustomState,
+    last_abort_code: Option<u64>,
 }
 
 impl AptosFuzzerState {
@@ -76,6 +79,7 @@ impl AptosFuzzerState {
             corpus_id: None,
             stop_requested: false,
             stage_stack: StageStack::default(),
+            last_abort_code: None,
         };
 
         if let Some((module_id, code)) = module_bytes {
@@ -96,6 +100,14 @@ impl AptosFuzzerState {
 
     pub fn aptos_state_mut(&mut self) -> &mut AptosCustomState {
         &mut self.aptos_state
+    }
+
+    pub fn last_abort_code(&self) -> Option<u64> {
+        self.last_abort_code
+    }
+
+    pub fn last_abort_code_mut(&mut self) -> &mut Option<u64> {
+        &mut self.last_abort_code
     }
 }
 

@@ -1,9 +1,11 @@
 use std::marker::PhantomData;
 
 use anyhow::Result;
-use aptos_types::transaction::TransactionPayload;
+use aptos_types::transaction::{TransactionPayload, TransactionStatus, ExecutionStatus};
+use aptos_move_core_types::vm_status::VMStatus;
 use aptos_vm::AptosVM;
 use libafl::executors::{Executor, ExitKind, HasObservers};
+use libafl::state::HasExecutions;
 use libafl_bolts::tuples::RefIndexable;
 
 use super::aptos_custom_state::AptosCustomState;
@@ -45,18 +47,33 @@ impl<EM, Z> AptosMoveExecutor<EM, Z> {
                 let code_storage =
                     aptos_vm_types::module_and_script_storage::AsAptosCodeStorage::as_aptos_code_storage(&view, state);
 
-                let (write_set, events) =
-                    self.aptos_vm
-                        .execute_user_payload_no_checking(state, &code_storage, &transaction, sender)?;
-                Ok(TransactionResult {
-                    status: aptos_types::transaction::TransactionStatus::Keep(
-                        aptos_types::vm_status::KeptVMStatus::Executed.into(),
-                    ),
-                    gas_used: 0,
-                    write_set,
-                    events,
-                    fee_statement: None,
-                })
+                // Try the full path that returns VMStatus + VMOutput for richer info
+                // Fallback to no_checking path if needed
+                match self
+                    .aptos_vm
+                    .execute_user_payload_no_checking(state, &code_storage, &transaction, sender)
+                {
+                    Ok((write_set, events)) => Ok(TransactionResult {
+                        status: aptos_types::transaction::TransactionStatus::Keep(
+                            aptos_types::vm_status::KeptVMStatus::Executed.into(),
+                        ),
+                        gas_used: 0,
+                        write_set,
+                        events,
+                        fee_statement: None,
+                    }),
+                    Err(_e) => {
+                        Ok(TransactionResult {
+                            status: aptos_types::transaction::TransactionStatus::Discard(
+                                aptos_move_core_types::vm_status::StatusCode::UNKNOWN_STATUS,
+                            ),
+                            gas_used: 0,
+                            write_set: aptos_types::write_set::WriteSet::default(),
+                            events: vec![],
+                            fee_statement: None,
+                        })
+                    }
+                }
             }
             _ => {
                 anyhow::bail!("Unsupported payload type for this executor")
@@ -73,15 +90,23 @@ impl<EM, Z> Executor<EM, AptosFuzzerInput, AptosFuzzerState, Z> for AptosMoveExe
         _mgr: &mut EM,
         input: &AptosFuzzerInput,
     ) -> Result<ExitKind, libafl::Error> {
+        *state.last_abort_code_mut() = None;
         let result = self.execute_transaction(input.payload().clone(), state.aptos_state(), None);
         match result {
             Ok(result) => {
                 self.success_count += 1;
+                if let TransactionStatus::Keep(execution_status) = &result.status {
+                    if let ExecutionStatus::MoveAbort { location: _, code, .. } = execution_status {
+                        *state.last_abort_code_mut() = Some(*code);
+                    }
+                }
                 state.aptos_state_mut().apply_write_set(&result.write_set);
+                *state.executions_mut() += 1;
                 Ok(ExitKind::Ok)
             }
             Err(_) => {
                 self.error_count += 1;
+                *state.executions_mut() += 1;
                 Ok(ExitKind::Ok)
             }
         }
