@@ -32,6 +32,8 @@ use aptos_types::write_set::{TransactionWrite, WriteSet};
 use aptos_vm::move_vm_ext::{AptosMoveResolver, AsExecutorView, AsResourceGroupView, ResourceGroupResolver};
 use aptos_vm_environment::natives::aptos_natives_with_builder;
 use aptos_vm_environment::prod_configs::{aptos_default_ty_builder, aptos_prod_vm_config};
+use aptos_cached_packages::head_release_bundle;
+use aptos_move_core_types::account_address::AccountAddress as MoveAccountAddress;
 use aptos_vm_types::module_and_script_storage::module_storage::AptosModuleStorage;
 use aptos_vm_types::resolver::{
     BlockSynchronizationKillSwitch, ExecutorView, ResourceGroupSize, ResourceGroupView, StateStorageView,
@@ -552,14 +554,26 @@ impl AptosCustomState {
             let bytes = bcs::to_bytes(&features).expect("serialize Features");
             kv_state.insert(state_key, StateValue::new_legacy(bytes.into()));
         }
-        Self {
+        let mut this = Self {
             kv_state,
             tables: HashMap::new(),
             modules: HashMap::new(),
             scripts_deser: DashMap::new(),
             scripts_verified: DashMap::new(),
             runtime_environment,
+        };
+
+        // Load and deploy Aptos framework bundle (includes move-stdlib, aptos-stdlib, aptos-framework, etc.)
+        // This ensures core modules like 0x1::signer are available to the VM linker.
+        let bundle = head_release_bundle();
+        for (module_bytes, module) in bundle.code_and_compiled_modules() {
+            let module_id = module.self_id();
+            // Framework bundles use named addresses; resolve to actual numeric addresses already baked in
+            // the compiled module. Just publish the bytes under its ModuleId.
+            this.deploy_module_bytes(module_id.clone(), module_bytes.to_vec());
         }
+
+        this
     }
 
     pub fn default_env() -> aptos_vm_environment::environment::AptosEnvironment {
