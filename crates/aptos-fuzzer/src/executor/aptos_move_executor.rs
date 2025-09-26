@@ -68,30 +68,21 @@ impl<EM, Z> AptosMoveExecutor<EM, Z> {
 impl<EM, Z> Executor<EM, AptosFuzzerInput, AptosFuzzerState, Z> for AptosMoveExecutor<EM, Z> {
     fn run_target(
         &mut self,
-        fuzzer: &mut Z,
+        _fuzzer: &mut Z,
         state: &mut AptosFuzzerState,
-        mgr: &mut EM,
+        _mgr: &mut EM,
         input: &AptosFuzzerInput,
     ) -> Result<ExitKind, libafl::Error> {
         let result = self.execute_transaction(input.payload().clone(), state.aptos_state(), None);
         match result {
             Ok(result) => {
                 self.success_count += 1;
-                if self.success_count % 100 == 0 {
-                    println!("[aptos-fuzzer] Executed {} successful transactions", self.success_count);
-                }
                 state.aptos_state_mut().apply_write_set(&result.write_set);
                 Ok(ExitKind::Ok)
             }
-            Err(e) => {
+            Err(_) => {
                 self.error_count += 1;
-                if self.error_count % 10 == 0 {
-                    println!("[aptos-fuzzer] {} execution errors so far", self.error_count);
-                }
-                // Log the error but don't shut down - continue fuzzing
-                eprintln!("[aptos-fuzzer] execution error: {e}");
-                Ok(ExitKind::Ok) // Return Ok to continue fuzzing even with
-                                 // errors
+                Ok(ExitKind::Ok)
             }
         }
     }

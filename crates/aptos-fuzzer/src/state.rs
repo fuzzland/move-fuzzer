@@ -84,9 +84,7 @@ impl AptosFuzzerState {
 
         for payload in Self::padding_abis(entry_abis) {
             let input = AptosFuzzerInput::new(payload);
-            if let Err(err) = state.corpus.add(Testcase::new(input)) {
-                eprintln!("[aptos-fuzzer] failed to seed ABI payload: {err}");
-            }
+            let _ = state.corpus.add(Testcase::new(input));
         }
 
         state
@@ -271,17 +269,6 @@ impl AptosFuzzerState {
         let mut paths = Vec::new();
         let mut abis = Vec::new();
         Self::collect_abis(path.as_path(), &mut paths, &mut abis);
-
-        if paths.is_empty() {
-            eprintln!("[aptos-fuzzer] no ABI files found under {}", path.display());
-        } else {
-            eprintln!(
-                "[aptos-fuzzer] loaded {} ABI file(s) from {}",
-                paths.len(),
-                path.display()
-            );
-        }
-
         abis
     }
 
@@ -289,10 +276,7 @@ impl AptosFuzzerState {
         if path.is_dir() {
             let read_dir = match fs::read_dir(path) {
                 Ok(rd) => rd,
-                Err(err) => {
-                    eprintln!("[aptos-fuzzer] failed to read directory {}: {err}", path.display());
-                    return;
-                }
+                Err(_) => return,
             };
             for entry in read_dir {
                 match entry {
@@ -320,26 +304,13 @@ impl AptosFuzzerState {
                 if let EntryABI::EntryFunction(abi) = entry_abi {
                     paths.push(path.to_path_buf());
                     abis.push(abi);
-                } else {
-                    eprintln!(
-                        "[aptos-fuzzer] skipping {}: TransactionScript ABIs not supported yet",
-                        path.display()
-                    );
                 }
             }
             Err(_) => {
                 // Fallback: try to decode as EntryFunctionABI directly (legacy format)
-                match bcs::from_bytes::<EntryFunctionABI>(&bytes) {
-                    Ok(abi) => {
-                        paths.push(path.to_path_buf());
-                        abis.push(abi);
-                    }
-                    Err(err) => {
-                        eprintln!(
-                            "[aptos-fuzzer] failed to decode ABI at {}: {err}. Expected BCS-encoded EntryABI or EntryFunctionABI",
-                            path.display()
-                        );
-                    }
+                if let Ok(abi) = bcs::from_bytes::<EntryFunctionABI>(&bytes) {
+                    paths.push(path.to_path_buf());
+                    abis.push(abi);
                 }
             }
         }
@@ -350,20 +321,12 @@ impl AptosFuzzerState {
 
         for abi in abis {
             if !abi.ty_args().is_empty() {
-                eprintln!(
-                    "[aptos-fuzzer] skipping {}::{}: ty_args not supported",
-                    abi.module_name(),
-                    abi.name()
-                );
                 continue;
             }
 
             let identifier = match Identifier::new(abi.name()) {
                 Ok(id) => id,
-                Err(err) => {
-                    eprintln!("[aptos-fuzzer] invalid function name {}: {err}", abi.name());
-                    continue;
-                }
+                Err(_) => continue,
             };
 
             let mut arg_bytes = Vec::new();
@@ -397,13 +360,6 @@ impl AptosFuzzerState {
                     break;
                 }
             }
-
-            eprintln!(
-                "[aptos-fuzzer] creating payload for {}::{} at address {}",
-                abi.module_name().name(),
-                abi.name(),
-                abi.module_name().address()
-            );
 
             let entry = AptosEntryFunction::new(abi.module_name().clone(), identifier, Vec::new(), arg_bytes);
             payloads.push(TransactionPayload::EntryFunction(entry));
@@ -441,26 +397,15 @@ impl AptosFuzzerState {
         let path = path?;
         let bytes = match fs::read(&path) {
             Ok(bytes) => bytes,
-            Err(err) => {
-                eprintln!("[aptos-fuzzer] failed to read module from {}: {err}", path.display());
-                return None;
-            }
+            Err(_) => return None,
         };
 
         let module = match CompiledModule::deserialize(bytes.as_slice()) {
             Ok(module) => module,
-            Err(err) => {
-                eprintln!("[aptos-fuzzer] failed to deserialize module {}: {err}", path.display());
-                return None;
-            }
+            Err(_) => return None,
         };
 
         let module_id = module.self_id();
-        eprintln!(
-            "[aptos-fuzzer] loaded module: {} at address {}",
-            module_id.name(),
-            module_id.address()
-        );
 
         Some((module_id, bytes))
     }
