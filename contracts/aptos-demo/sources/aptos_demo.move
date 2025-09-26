@@ -111,6 +111,13 @@ module aptos_demo::shl_demo {
         s.config.shift_amount = s.config.shift_amount + 1;
         s.config.multiplier = s.config.multiplier + 1;
     }
+    
+    /// Invariant function that checks if the upper 32 bits of the output value are non-zero
+    /// Aborts with code 1337 if (output >> 32) > 0
+    public fun check_invariant(output: u64) {
+        let upper_bits = output >> 32;
+        assert!(upper_bits == 0, 1337);
+    }
 }
 
 
