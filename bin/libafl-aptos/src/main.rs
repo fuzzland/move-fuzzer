@@ -1,28 +1,39 @@
+use std::path::PathBuf;
+
 use aptos_fuzzer::{AptosFuzzerMutator, AptosFuzzerState, AptosMoveExecutor};
+use clap::Parser;
+use libafl::corpus::Corpus;
 use libafl::events::SimpleEventManager;
-use libafl::feedbacks::MaxMapFeedback;
+use libafl::feedbacks::ConstFeedback;
 use libafl::fuzzer::Fuzzer;
 use libafl::monitors::SimpleMonitor;
-use libafl::observers::StdMapObserver;
 use libafl::schedulers::QueueScheduler;
 use libafl::stages::StdMutationalStage;
-use libafl::{feedback_and_fast, StdFuzzer};
+use libafl::state::HasCorpus;
+use libafl::StdFuzzer;
 use libafl_bolts::tuples::tuple_list;
 
-static mut MAP_COVERAGE: [u8; 16] = [0; 16];
-#[allow(static_mut_refs)] // only a problem in nightly
-static mut MAP_COVERAGE_PTR: *mut u8 = unsafe { MAP_COVERAGE.as_mut_ptr() };
+#[derive(Debug, Parser)]
+#[command(author, version, about = "LibAFL-based fuzzer for Aptos Move modules")]
+struct Cli {
+    /// Path to an ABI file or directory to seed initial inputs
+    #[arg(long = "abi-path", value_name = "ABI_PATH")]
+    abi_path: Option<PathBuf>,
+
+    /// Path to a compiled Move module to publish before fuzzing
+    #[arg(long = "module-path", value_name = "MODULE_PATH")]
+    module_path: Option<PathBuf>,
+}
 
 fn main() {
-    #[allow(static_mut_refs)] // only a problem in nightly
-    let observer = unsafe { StdMapObserver::from_mut_ptr("dummy_map", MAP_COVERAGE_PTR, MAP_COVERAGE.len()) };
-    // TODO: besides coverage e.g. object touched
-    let feedback = MaxMapFeedback::new(&observer);
+    let cli = Cli::parse();
+    println!("Starting Aptos Move Fuzzer...");
 
-    let objective = feedback_and_fast!(
-        // TODO: add crash feedback
-        MaxMapFeedback::with_name("on_coverage", &observer)
-    );
+    // Use simple constant feedback for now - focus on mutation testing
+    // rather than coverage-guided fuzzing
+    let feedback = ConstFeedback::new(true);
+    let objective = ConstFeedback::new(false);
+
     let mon = SimpleMonitor::new(|s| println!("{s}"));
     let mut mgr = SimpleEventManager::new(mon);
     let scheduler = QueueScheduler::new();
@@ -30,10 +41,15 @@ fn main() {
     let mut fuzzer = StdFuzzer::new(scheduler, feedback, objective);
 
     let mut executor = AptosMoveExecutor::new();
-    let mut state = AptosFuzzerState::new();
+    let mut state = AptosFuzzerState::new(cli.abi_path, cli.module_path);
     let mutator = AptosFuzzerMutator::default();
 
     let mut stages = tuple_list!(StdMutationalStage::new(mutator));
+
+    println!(
+        "Starting fuzzing loop with {} initial inputs in corpus",
+        state.corpus().count()
+    );
 
     fuzzer
         .fuzz_loop(&mut stages, &mut executor, &mut state, &mut mgr)
