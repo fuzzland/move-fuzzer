@@ -51,8 +51,7 @@ fn main() {
         state.corpus().count()
     );
 
-    // Pre-execute all initial corpus inputs once (AFL-like seed evaluation)
-    // so that we don't start with executions: 0
+    // Pre-execute all initial corpus inputs once (seed evaluation)
     let ids: Vec<_> = state.corpus().ids().collect();
     for id in ids {
         let input = state

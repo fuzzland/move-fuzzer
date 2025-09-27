@@ -79,10 +79,10 @@ echo "[+] Step 4: Running libafl-aptos fuzzer..."
 cd "$PROJECT_ROOT"
 
 echo "[*] Running command:"
-echo "[*] $LIBAFL_APTOS_BIN --module-path \"$MODULE_PATH\" --abi-path \"$ABI_PATH\""
+echo "[*] timeout 20 $LIBAFL_APTOS_BIN --module-path \"$MODULE_PATH\" --abi-path \"$ABI_PATH\""
 echo ""
 
 # Run the fuzzer
-"$LIBAFL_APTOS_BIN" --module-path "$MODULE_PATH" --abi-path "$ABI_PATH"
+timeout 20 "$LIBAFL_APTOS_BIN" --module-path "$MODULE_PATH" --abi-path "$ABI_PATH"
 
 echo "[+] Fuzzing completed"

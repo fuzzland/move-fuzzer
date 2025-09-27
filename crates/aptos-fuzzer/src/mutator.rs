@@ -139,7 +139,6 @@ impl AptosFuzzerMutator {
                 true
             }
             TransactionArgument::U256(val) => {
-                // Generate increasing U256 based on u128
                 let high_part = Self::next_u128_for_mutation(state);
                 let low_part = Self::next_u128_for_mutation(state);
                 let mut bytes = [0u8; 32];
@@ -149,13 +148,10 @@ impl AptosFuzzerMutator {
                 true
             }
             TransactionArgument::Bool(val) => {
-                // Use random but still be deterministic based on state
                 *val = state.rand_mut().next() % 2 == 0;
                 true
             }
             TransactionArgument::Address(_addr) => {
-                // For addresses, we'll use the same pattern but it's less meaningful
-                // to make addresses "increasing", so we just use random
                 let mut addr_bytes = [0u8; 32];
                 for byte in addr_bytes.iter_mut() {
                     *byte = (state.rand_mut().next() % 256) as u8;
@@ -164,13 +160,11 @@ impl AptosFuzzerMutator {
                 true
             }
             TransactionArgument::U8Vector(vec) => {
-                // Generate vector with increasing u64 values
                 let new_value = Self::next_u64_for_mutation(state);
                 *vec = bcs::to_bytes(&new_value).unwrap_or_else(|_| vec![0u8; 8]);
                 true
             }
             TransactionArgument::Serialized(bytes) => {
-                // Generate serialized data with increasing u64 value
                 let new_value = Self::next_u64_for_mutation(state);
                 *bytes = bcs::to_bytes(&new_value).unwrap_or_else(|_| vec![0u8; 8]);
                 true
@@ -238,7 +232,6 @@ impl Mutator<AptosFuzzerInput, AptosFuzzerState> for AptosFuzzerMutator {
         _state: &mut AptosFuzzerState,
         _new_corpus_id: Option<libafl::corpus::CorpusId>,
     ) -> Result<(), libafl::Error> {
-        // No post-execution cleanup needed for current mutator
         Ok(())
     }
 }

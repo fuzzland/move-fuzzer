@@ -46,8 +46,6 @@ impl<EM, Z> AptosMoveExecutor<EM, Z> {
                 let code_storage =
                     aptos_vm_types::module_and_script_storage::AsAptosCodeStorage::as_aptos_code_storage(&view, state);
 
-                // Try the full path that returns VMStatus + VMOutput for richer info
-                // Fallback to no_checking path if needed
                 match self
                     .aptos_vm
                     .execute_user_payload_no_checking(state, &code_storage, &transaction, sender)

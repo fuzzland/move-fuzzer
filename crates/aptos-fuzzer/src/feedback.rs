@@ -13,9 +13,7 @@ use crate::{AptosFuzzerInput, AptosFuzzerState};
 /// Considers an input interesting if it produces a new abort code that hasn't been seen before.
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct AbortCodeFeedback {
-    /// Set of abort codes we've seen before
     seen_abort_codes: HashSet<u64>,
-    /// The name of this feedback
     name: Cow<'static, str>,
 }
 
@@ -63,12 +61,9 @@ where
             // If this is a new abort code we haven't seen before, it's interesting
             if !self.seen_abort_codes.contains(&abort_code) {
                 self.seen_abort_codes.insert(abort_code);
-                println!("🎯 New abort code detected: {}", abort_code);
                 return Ok(true);
             }
         }
-        
-        // If no abort code or we've seen this abort code before, not interesting
         Ok(false)
     }
 
@@ -84,13 +79,10 @@ where
     }
 }
 
-/// Objective feedback that considers abort codes as objectives (bugs found).
-/// This treats any abort code as a potential bug that should be saved to the solutions corpus.
+/// Objective feedback that considers abort codes as objectives
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct AbortCodeObjective {
-    /// Set of abort codes we want to target (empty means all abort codes are objectives)
     target_abort_codes: HashSet<u64>,
-    /// The name of this objective
     name: Cow<'static, str>,
 }
 
@@ -146,17 +138,14 @@ where
             // If we have specific target codes, only those are objectives
             if !self.target_abort_codes.is_empty() {
                 if self.target_abort_codes.contains(&abort_code) {
-                    println!("🐛 Target abort code found: {}", abort_code);
                     return Ok(true);
                 }
             } else {
                 // If no specific targets, any abort code is an objective
-                println!("🐛 Abort code found: {}", abort_code);
                 return Ok(true);
             }
         }
         
-        // No abort code or not a target code
         Ok(false)
     }
 
@@ -167,7 +156,6 @@ where
         _observers: &OT,
         _testcase: &mut libafl::corpus::Testcase<AptosFuzzerInput>,
     ) -> Result<(), Error> {
-        // We could add metadata about the abort code objective to the testcase here
         Ok(())
     }
 }
