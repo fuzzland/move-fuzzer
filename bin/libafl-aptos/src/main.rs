@@ -9,10 +9,9 @@ use libafl::monitors::SimpleMonitor;
 use libafl::schedulers::QueueScheduler;
 use libafl::stages::StdMutationalStage;
 use libafl::state::HasCorpus;
-// use libafl::evaluators::Evaluator; // old path; not present in this version
 use libafl::StdFuzzer;
 use libafl_bolts::tuples::tuple_list;
-use libafl::Evaluator; // bring trait for evaluate_input into scope
+use libafl::Evaluator;
 
 #[derive(Debug, Parser)]
 #[command(author, version, about = "LibAFL-based fuzzer for Aptos Move modules")]
@@ -30,7 +29,6 @@ fn main() {
     let cli = Cli::parse();
     println!("Starting Aptos Move Fuzzer...");
 
-    // Use abort code feedback to track new abort codes and find bugs
     let feedback = AbortCodeFeedback::new();
     let objective = AbortCodeObjective::new();
 
