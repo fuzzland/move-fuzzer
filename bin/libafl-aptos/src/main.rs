@@ -1,10 +1,9 @@
 use std::path::PathBuf;
 
-use aptos_fuzzer::{AptosFuzzerMutator, AptosFuzzerState, AptosMoveExecutor};
+use aptos_fuzzer::{AbortCodeFeedback, AbortCodeObjective, AptosFuzzerMutator, AptosFuzzerState, AptosMoveExecutor};
 use clap::Parser;
 use libafl::corpus::Corpus;
 use libafl::events::SimpleEventManager;
-use libafl::feedbacks::ConstFeedback;
 use libafl::fuzzer::Fuzzer;
 use libafl::monitors::SimpleMonitor;
 use libafl::schedulers::QueueScheduler;
@@ -12,6 +11,7 @@ use libafl::stages::StdMutationalStage;
 use libafl::state::HasCorpus;
 use libafl::StdFuzzer;
 use libafl_bolts::tuples::tuple_list;
+use libafl::Evaluator;
 
 #[derive(Debug, Parser)]
 #[command(author, version, about = "LibAFL-based fuzzer for Aptos Move modules")]
@@ -29,10 +29,8 @@ fn main() {
     let cli = Cli::parse();
     println!("Starting Aptos Move Fuzzer...");
 
-    // Use simple constant feedback for now - focus on mutation testing
-    // rather than coverage-guided fuzzing
-    let feedback = ConstFeedback::new(true);
-    let objective = ConstFeedback::new(false);
+    let feedback = AbortCodeFeedback::new();
+    let objective = AbortCodeObjective::new();
 
     let mon = SimpleMonitor::new(|s| println!("{s}"));
     let mut mgr = SimpleEventManager::new(mon);
@@ -50,6 +48,17 @@ fn main() {
         "Starting fuzzing loop with {} initial inputs in corpus",
         state.corpus().count()
     );
+
+    // Pre-execute all initial corpus inputs once (seed evaluation)
+    let ids: Vec<_> = state.corpus().ids().collect();
+    for id in ids {
+        let input = state
+            .corpus()
+            .cloned_input_for_id(id)
+            .expect("failed to clone input");
+        let _ = libafl::Evaluator::evaluate_input(&mut fuzzer, &mut state, &mut executor, &mut mgr, &input)
+            .expect("failed to evaluate initial input");
+    }
 
     fuzzer
         .fuzz_loop(&mut stages, &mut executor, &mut state, &mut mgr)

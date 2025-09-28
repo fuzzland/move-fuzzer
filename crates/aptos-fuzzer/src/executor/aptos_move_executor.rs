@@ -1,9 +1,10 @@
 use std::marker::PhantomData;
 
-use anyhow::Result;
-use aptos_types::transaction::TransactionPayload;
+use aptos_types::transaction::{TransactionPayload, TransactionStatus, ExecutionStatus};
+use aptos_move_core_types::vm_status::{VMStatus, StatusCode};
 use aptos_vm::AptosVM;
 use libafl::executors::{Executor, ExitKind, HasObservers};
+use libafl::state::HasExecutions;
 use libafl_bolts::tuples::RefIndexable;
 
 use super::aptos_custom_state::AptosCustomState;
@@ -37,7 +38,7 @@ impl<EM, Z> AptosMoveExecutor<EM, Z> {
         transaction: TransactionPayload,
         state: &AptosCustomState,
         sender: Option<aptos_move_core_types::account_address::AccountAddress>,
-    ) -> Result<TransactionResult> {
+    ) -> core::result::Result<TransactionResult, VMStatus> {
         match &transaction {
             TransactionPayload::EntryFunction(_) | TransactionPayload::Script(_) => {
                 let view = CustomStateView::new(state);
@@ -45,21 +46,28 @@ impl<EM, Z> AptosMoveExecutor<EM, Z> {
                 let code_storage =
                     aptos_vm_types::module_and_script_storage::AsAptosCodeStorage::as_aptos_code_storage(&view, state);
 
-                let (write_set, events) =
-                    self.aptos_vm
-                        .execute_user_payload_no_checking(state, &code_storage, &transaction, sender)?;
-                Ok(TransactionResult {
-                    status: aptos_types::transaction::TransactionStatus::Keep(
-                        aptos_types::vm_status::KeptVMStatus::Executed.into(),
-                    ),
-                    gas_used: 0,
-                    write_set,
-                    events,
-                    fee_statement: None,
-                })
+                match self
+                    .aptos_vm
+                    .execute_user_payload_no_checking(state, &code_storage, &transaction, sender)
+                {
+                    Ok((write_set, events)) => Ok(TransactionResult {
+                        status: aptos_types::transaction::TransactionStatus::Keep(
+                            aptos_types::vm_status::KeptVMStatus::Executed.into(),
+                        ),
+                        gas_used: 0,
+                        write_set,
+                        events,
+                        fee_statement: None,
+                    }),
+                    Err(e) => Err(e),
+                }
             }
             _ => {
-                anyhow::bail!("Unsupported payload type for this executor")
+                Err(VMStatus::Error {
+                    status_code: StatusCode::UNKNOWN_STATUS,
+                    sub_status: None,
+                    message: Some("Unsupported payload type for this executor".to_string()),
+                })
             }
         }
     }
@@ -73,15 +81,32 @@ impl<EM, Z> Executor<EM, AptosFuzzerInput, AptosFuzzerState, Z> for AptosMoveExe
         _mgr: &mut EM,
         input: &AptosFuzzerInput,
     ) -> Result<ExitKind, libafl::Error> {
+        *state.last_abort_code_mut() = None;
         let result = self.execute_transaction(input.payload().clone(), state.aptos_state(), None);
         match result {
             Ok(result) => {
                 self.success_count += 1;
+                if let TransactionStatus::Keep(execution_status) = &result.status {
+                    if let ExecutionStatus::MoveAbort { location: _, code, .. } = execution_status {
+                        *state.last_abort_code_mut() = Some(*code);
+                        if *code == 1337 {
+                            println!("[fuzzer] abort code 1337 captured");
+                        }
+                    }
+                }
                 state.aptos_state_mut().apply_write_set(&result.write_set);
+                *state.executions_mut() += 1;
                 Ok(ExitKind::Ok)
             }
-            Err(_) => {
+            Err(vm_status) => {
                 self.error_count += 1;
+                if let VMStatus::MoveAbort(_loc, code) = vm_status {
+                    *state.last_abort_code_mut() = Some(code);
+                    if code == 1337 {
+                        println!("[fuzzer] abort code 1337 captured");
+                    }
+                }
+                *state.executions_mut() += 1;
                 Ok(ExitKind::Ok)
             }
         }
