@@ -10,7 +10,8 @@ use serde::{Deserialize, Serialize};
 use crate::{AptosFuzzerInput, AptosFuzzerState};
 
 /// Feedback that tracks abort codes encountered during execution.
-/// Considers an input interesting if it produces a new abort code that hasn't been seen before.
+/// Considers an input interesting if it produces a new abort code that hasn't
+/// been seen before.
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct AbortCodeFeedback {
     seen_abort_codes: HashSet<u64>,
@@ -87,7 +88,8 @@ pub struct AbortCodeObjective {
 }
 
 impl AbortCodeObjective {
-    /// Creates a new AbortCodeObjective that treats any abort code as an objective
+    /// Creates a new AbortCodeObjective that treats any abort code as an
+    /// objective
     pub fn new() -> Self {
         Self {
             target_abort_codes: HashSet::new(),
@@ -95,7 +97,8 @@ impl AbortCodeObjective {
         }
     }
 
-    /// Creates a new AbortCodeObjective that only treats specific abort codes as objectives
+    /// Creates a new AbortCodeObjective that only treats specific abort codes
+    /// as objectives
     pub fn with_target_codes(codes: &[u64]) -> Self {
         Self {
             target_abort_codes: codes.iter().cloned().collect(),
@@ -145,7 +148,7 @@ where
                 return Ok(true);
             }
         }
-        
+
         Ok(false)
     }
 

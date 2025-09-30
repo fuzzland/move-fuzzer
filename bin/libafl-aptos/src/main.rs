@@ -11,7 +11,6 @@ use libafl::stages::StdMutationalStage;
 use libafl::state::HasCorpus;
 use libafl::StdFuzzer;
 use libafl_bolts::tuples::tuple_list;
-use libafl::Evaluator;
 
 #[derive(Debug, Parser)]
 #[command(author, version, about = "LibAFL-based fuzzer for Aptos Move modules")]
@@ -52,10 +51,7 @@ fn main() {
     // Pre-execute all initial corpus inputs once (seed evaluation)
     let ids: Vec<_> = state.corpus().ids().collect();
     for id in ids {
-        let input = state
-            .corpus()
-            .cloned_input_for_id(id)
-            .expect("failed to clone input");
+        let input = state.corpus().cloned_input_for_id(id).expect("failed to clone input");
         let _ = libafl::Evaluator::evaluate_input(&mut fuzzer, &mut state, &mut executor, &mut mgr, &input)
             .expect("failed to evaluate initial input");
     }
