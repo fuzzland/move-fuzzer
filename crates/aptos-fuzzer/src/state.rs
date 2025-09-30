@@ -3,8 +3,6 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 
-use libafl_bolts::rands::Rand;
-
 use aptos_move_binary_format::CompiledModule;
 use aptos_move_core_types::account_address::AccountAddress;
 use aptos_move_core_types::identifier::Identifier;
@@ -366,7 +364,7 @@ impl AptosFuzzerState {
 
             while arg_bytes.len() < abi.args().len() {
                 // Fallback to empty vector<u8> if some type was not covered
-                if let Some(bytes) = bcs::to_bytes::<Vec<u8>>(&Vec::new()).ok() {
+                if let Ok(bytes) = bcs::to_bytes::<Vec<u8>>(&Vec::new()) {
                     arg_bytes.push(bytes);
                 } else {
                     break;

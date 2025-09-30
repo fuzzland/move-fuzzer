@@ -2,9 +2,9 @@ use std::borrow::Cow;
 
 use aptos_types::transaction::{EntryFunction, Script, TransactionArgument, TransactionPayload};
 use libafl::mutators::{MutationResult, Mutator};
-use libafl_bolts::Named;
-use libafl_bolts::rands::Rand;
 use libafl::state::HasRand;
+use libafl_bolts::rands::Rand;
+use libafl_bolts::Named;
 
 use crate::input::AptosFuzzerInput;
 use crate::state::AptosFuzzerState;
@@ -40,7 +40,8 @@ impl AptosFuzzerMutator {
         mutated
     }
 
-    /// Mutate Script arguments using state's random source and ensuring increasing values
+    /// Mutate Script arguments using state's random source and ensuring
+    /// increasing values
     fn mutate_script_args(script: &mut Script, state: &mut AptosFuzzerState) -> bool {
         let args = script.args();
         if args.is_empty() {
@@ -68,7 +69,8 @@ impl AptosFuzzerMutator {
         mutated
     }
 
-    /// Mutate a byte vector using state's random source and ensuring increasing values
+    /// Mutate a byte vector using state's random source and ensuring increasing
+    /// values
     fn mutate_byte_vector(bytes: &mut Vec<u8>, state: &mut AptosFuzzerState) -> bool {
         if bytes.is_empty() {
             // Generate monotonic u64 using mutator-local logic (no nested types)
@@ -86,7 +88,7 @@ impl AptosFuzzerMutator {
                 return true;
             }
         }
-        
+
         // Try u32
         if bytes.len() == 4 {
             let new_value = Self::next_u32_for_mutation(state);
@@ -115,7 +117,8 @@ impl AptosFuzzerMutator {
         false
     }
 
-    /// Mutate a TransactionArgument using state's random source and ensuring increasing values
+    /// Mutate a TransactionArgument using state's random source and ensuring
+    /// increasing values
     fn mutate_transaction_argument(arg: &mut TransactionArgument, state: &mut AptosFuzzerState) -> bool {
         match arg {
             TransactionArgument::U8(val) => {
@@ -148,7 +151,7 @@ impl AptosFuzzerMutator {
                 true
             }
             TransactionArgument::Bool(val) => {
-                *val = state.rand_mut().next() % 2 == 0;
+                *val = state.rand_mut().next().is_multiple_of(2);
                 true
             }
             TransactionArgument::Address(_addr) => {
@@ -156,7 +159,8 @@ impl AptosFuzzerMutator {
                 for byte in addr_bytes.iter_mut() {
                     *byte = (state.rand_mut().next() % 256) as u8;
                 }
-                *_addr = aptos_move_core_types::account_address::AccountAddress::try_from(addr_bytes.to_vec()).unwrap_or(*_addr);
+                *_addr = aptos_move_core_types::account_address::AccountAddress::try_from(addr_bytes.to_vec())
+                    .unwrap_or(*_addr);
                 true
             }
             TransactionArgument::U8Vector(vec) => {
@@ -195,7 +199,7 @@ impl AptosFuzzerMutator {
     #[inline]
     fn next_u64_for_mutation(state: &mut AptosFuzzerState) -> u64 {
         // Start near 2^32 and grow to guarantee (value >> 32) > 0 soon
-        let base: u64 = (1u64 << 32) + (state.rand_mut().next() % (1u64 << 20)) as u64;
+        let base: u64 = (1u64 << 32) + (state.rand_mut().next() % (1u64 << 20));
         base
     }
 

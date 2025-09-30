@@ -1,7 +1,7 @@
 use std::marker::PhantomData;
 
-use aptos_types::transaction::{TransactionPayload, TransactionStatus, ExecutionStatus};
-use aptos_move_core_types::vm_status::{VMStatus, StatusCode};
+use aptos_move_core_types::vm_status::{StatusCode, VMStatus};
+use aptos_types::transaction::{ExecutionStatus, TransactionPayload, TransactionStatus};
 use aptos_vm::AptosVM;
 use libafl::executors::{Executor, ExitKind, HasObservers};
 use libafl::state::HasExecutions;
@@ -62,14 +62,18 @@ impl<EM, Z> AptosMoveExecutor<EM, Z> {
                     Err(e) => Err(e),
                 }
             }
-            _ => {
-                Err(VMStatus::Error {
-                    status_code: StatusCode::UNKNOWN_STATUS,
-                    sub_status: None,
-                    message: Some("Unsupported payload type for this executor".to_string()),
-                })
-            }
+            _ => Err(VMStatus::Error {
+                status_code: StatusCode::UNKNOWN_STATUS,
+                sub_status: None,
+                message: Some("Unsupported payload type for this executor".to_string()),
+            }),
         }
+    }
+}
+
+impl<EM, Z> Default for AptosMoveExecutor<EM, Z> {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -86,12 +90,10 @@ impl<EM, Z> Executor<EM, AptosFuzzerInput, AptosFuzzerState, Z> for AptosMoveExe
         match result {
             Ok(result) => {
                 self.success_count += 1;
-                if let TransactionStatus::Keep(execution_status) = &result.status {
-                    if let ExecutionStatus::MoveAbort { location: _, code, .. } = execution_status {
-                        *state.last_abort_code_mut() = Some(*code);
-                        if *code == 1337 {
-                            println!("[fuzzer] abort code 1337 captured");
-                        }
+                if let TransactionStatus::Keep(ExecutionStatus::MoveAbort { location: _, code, .. }) = &result.status {
+                    *state.last_abort_code_mut() = Some(*code);
+                    if *code == 1337 {
+                        println!("[fuzzer] abort code 1337 captured");
                     }
                 }
                 state.aptos_state_mut().apply_write_set(&result.write_set);
