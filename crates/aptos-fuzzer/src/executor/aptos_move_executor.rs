@@ -10,6 +10,7 @@ use libafl_bolts::tuples::RefIndexable;
 use super::aptos_custom_state::AptosCustomState;
 use super::custom_state_view::CustomStateView;
 use super::types::TransactionResult;
+use crate::observer::PcIndexObserver;
 use crate::{AptosFuzzerInput, AptosFuzzerState};
 
 pub struct AptosMoveExecutor<EM, Z> {
@@ -18,7 +19,7 @@ pub struct AptosMoveExecutor<EM, Z> {
     // Simple execution counters for debugging
     success_count: u64,
     error_count: u64,
-    observers: (),
+    observers: (PcIndexObserver, ()),
 }
 
 impl<EM, Z> AptosMoveExecutor<EM, Z> {
@@ -29,12 +30,12 @@ impl<EM, Z> AptosMoveExecutor<EM, Z> {
             _phantom: PhantomData,
             success_count: 0,
             error_count: 0,
-            observers: (),
+            observers: (PcIndexObserver::new(), ()),
         }
     }
 
     pub fn execute_transaction(
-        &self,
+        &mut self,
         transaction: TransactionPayload,
         state: &AptosCustomState,
         sender: Option<aptos_move_core_types::account_address::AccountAddress>,
@@ -46,10 +47,14 @@ impl<EM, Z> AptosMoveExecutor<EM, Z> {
                 let code_storage =
                     aptos_vm_types::module_and_script_storage::AsAptosCodeStorage::as_aptos_code_storage(&view, state);
 
-                match self
-                    .aptos_vm
-                    .execute_user_payload_no_checking(state, &code_storage, &transaction, sender)
-                {
+                let (result, pcs) = self.aptos_vm.execute_user_payload_no_checking_with_counter(
+                    state,
+                    &code_storage,
+                    &transaction,
+                    sender,
+                );
+                self.observers.0.set_pcs(pcs);
+                match result {
                     Ok((write_set, events)) => Ok(TransactionResult {
                         status: aptos_types::transaction::TransactionStatus::Keep(
                             aptos_types::vm_status::KeptVMStatus::Executed.into(),
@@ -116,7 +121,7 @@ impl<EM, Z> Executor<EM, AptosFuzzerInput, AptosFuzzerState, Z> for AptosMoveExe
 }
 
 impl<EM, Z> HasObservers for AptosMoveExecutor<EM, Z> {
-    type Observers = ();
+    type Observers = (PcIndexObserver, ());
 
     fn observers(&self) -> RefIndexable<&Self::Observers, Self::Observers> {
         RefIndexable::from(&self.observers)
