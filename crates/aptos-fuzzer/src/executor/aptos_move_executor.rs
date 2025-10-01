@@ -2,6 +2,7 @@ use std::marker::PhantomData;
 
 use aptos_move_core_types::vm_status::{StatusCode, VMStatus};
 use aptos_types::transaction::{ExecutionStatus, TransactionPayload, TransactionStatus};
+use aptos_vm::aptos_vm::ExecOutcomeKind;
 use aptos_vm::AptosVM;
 use libafl::executors::{Executor, ExitKind, HasObservers};
 use libafl::state::HasExecutions;
@@ -39,7 +40,7 @@ impl<EM, Z> AptosMoveExecutor<EM, Z> {
         transaction: TransactionPayload,
         state: &AptosCustomState,
         sender: Option<aptos_move_core_types::account_address::AccountAddress>,
-    ) -> core::result::Result<TransactionResult, VMStatus> {
+    ) -> (core::result::Result<TransactionResult, VMStatus>, ExecOutcomeKind) {
         match &transaction {
             TransactionPayload::EntryFunction(_) | TransactionPayload::Script(_) => {
                 let view = CustomStateView::new(state);
@@ -47,14 +48,14 @@ impl<EM, Z> AptosMoveExecutor<EM, Z> {
                 let code_storage =
                     aptos_vm_types::module_and_script_storage::AsAptosCodeStorage::as_aptos_code_storage(&view, state);
 
-                let (result, pcs) = self.aptos_vm.execute_user_payload_no_checking_with_counter(
+                let (result, pcs, outcome) = self.aptos_vm.execute_user_payload_no_checking_with_counter(
                     state,
                     &code_storage,
                     &transaction,
                     sender,
                 );
                 self.observers.0.set_pcs(pcs);
-                match result {
+                let res = match result {
                     Ok((write_set, events)) => Ok(TransactionResult {
                         status: aptos_types::transaction::TransactionStatus::Keep(
                             aptos_types::vm_status::KeptVMStatus::Executed.into(),
@@ -65,13 +66,17 @@ impl<EM, Z> AptosMoveExecutor<EM, Z> {
                         fee_statement: None,
                     }),
                     Err(e) => Err(e),
-                }
+                };
+                (res, outcome)
             }
-            _ => Err(VMStatus::Error {
-                status_code: StatusCode::UNKNOWN_STATUS,
-                sub_status: None,
-                message: Some("Unsupported payload type for this executor".to_string()),
-            }),
+            _ => (
+                Err(VMStatus::Error {
+                    status_code: StatusCode::UNKNOWN_STATUS,
+                    sub_status: None,
+                    message: Some("Unsupported payload type for this executor".to_string()),
+                }),
+                ExecOutcomeKind::OtherError,
+            ),
         }
     }
 }
@@ -91,7 +96,7 @@ impl<EM, Z> Executor<EM, AptosFuzzerInput, AptosFuzzerState, Z> for AptosMoveExe
         input: &AptosFuzzerInput,
     ) -> Result<ExitKind, libafl::Error> {
         *state.last_abort_code_mut() = None;
-        let result = self.execute_transaction(input.payload().clone(), state.aptos_state(), None);
+        let (result, outcome) = self.execute_transaction(input.payload().clone(), state.aptos_state(), None);
         match result {
             Ok(result) => {
                 self.success_count += 1;
@@ -107,14 +112,22 @@ impl<EM, Z> Executor<EM, AptosFuzzerInput, AptosFuzzerState, Z> for AptosMoveExe
             }
             Err(vm_status) => {
                 self.error_count += 1;
-                if let VMStatus::MoveAbort(_loc, code) = vm_status {
+                if let VMStatus::MoveAbort(ref _loc, code) = vm_status {
                     *state.last_abort_code_mut() = Some(code);
                     if code == 1337 {
                         println!("[fuzzer] abort code 1337 captured");
                     }
                 }
+                let exit_kind = match outcome {
+                    ExecOutcomeKind::Ok => ExitKind::Ok,
+                    ExecOutcomeKind::MoveAbort(_) => ExitKind::Ok,
+                    ExecOutcomeKind::OutOfGas => ExitKind::Ok,
+                    ExecOutcomeKind::OtherError => ExitKind::Ok,
+                    ExecOutcomeKind::InvariantViolation => ExitKind::Crash,
+                    ExecOutcomeKind::Panic => ExitKind::Crash,
+                };
                 *state.executions_mut() += 1;
-                Ok(ExitKind::Ok)
+                Ok(exit_kind)
             }
         }
     }
