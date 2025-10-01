@@ -92,6 +92,26 @@ impl AptosFuzzerState {
         state
     }
 
+    /// Drain current corpus entries into a vector of inputs and clear the
+    /// corpus. Useful to re-insert seeds via fuzzer.add_input so
+    /// events/feedback are fired.
+    pub fn take_initial_inputs(&mut self) -> Vec<AptosFuzzerInput> {
+        let ids: Vec<_> = self.corpus().ids().collect();
+        let mut inputs = Vec::with_capacity(ids.len());
+        for id in ids {
+            if let Ok(input) = self.corpus().cloned_input_for_id(id) {
+                inputs.push(input);
+            }
+        }
+        // Clear existing entries
+        while let Some(id) = self.corpus().ids().next() {
+            let _ = self.corpus_mut().remove(id);
+        }
+        inputs
+    }
+
+    // setup_with_fallbacks removed: callers must provide valid paths
+
     pub fn aptos_state(&self) -> &AptosCustomState {
         &self.aptos_state
     }

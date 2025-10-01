@@ -6,9 +6,9 @@ use aptos_vm::aptos_vm::ExecOutcomeKind;
 use aptos_vm::AptosVM;
 use libafl::executors::{Executor, ExitKind, HasObservers};
 use libafl::observers::map::{HitcountsMapObserver, OwnedMapObserver};
-use libafl_bolts::AsSliceMut;
 use libafl::state::HasExecutions;
 use libafl_bolts::tuples::RefIndexable;
+use libafl_bolts::AsSliceMut;
 
 use super::aptos_custom_state::AptosCustomState;
 use super::custom_state_view::CustomStateView;
@@ -43,8 +43,23 @@ impl<EM, Z> AptosMoveExecutor<EM, Z> {
         }
     }
 
-    pub fn pc_observer(&self) -> &HitcountsMapObserver<OwnedMapObserver<u8>> { &self.observers.0 }
-    pub fn pc_observer_mut(&mut self) -> &mut HitcountsMapObserver<OwnedMapObserver<u8>> { &mut self.observers.0 }
+    #[inline]
+    fn hash32(bytes: &[u8]) -> u32 {
+        // FNV-1a 32-bit
+        let mut hash: u32 = 0x811C9DC5;
+        for &b in bytes {
+            hash ^= b as u32;
+            hash = hash.wrapping_mul(0x01000193);
+        }
+        hash
+    }
+
+    pub fn pc_observer(&self) -> &HitcountsMapObserver<OwnedMapObserver<u8>> {
+        &self.observers.0
+    }
+    pub fn pc_observer_mut(&mut self) -> &mut HitcountsMapObserver<OwnedMapObserver<u8>> {
+        &mut self.observers.0
+    }
 
     pub fn execute_transaction(
         &mut self,
@@ -67,11 +82,27 @@ impl<EM, Z> AptosMoveExecutor<EM, Z> {
                 );
                 // Fold pcs into AFL-style edge coverage map
                 let map = self.observers.0.as_slice_mut();
-                // Reset map per-exec to record only current run (HitcountsMapObserver will bucket)
-                for b in map.iter_mut() { *b = 0; }
+                // Reset map per-exec to record only current run (HitcountsMapObserver will
+                // bucket)
+                for b in map.iter_mut() {
+                    *b = 0;
+                }
                 self.prev_loc = 0;
+                // Build a stable per-function base id to reduce inter-function collisions
+                let base_id: u32 = match &transaction {
+                    TransactionPayload::EntryFunction(ef) => {
+                        let (module, function, _ty_args, _args) = ef.clone().into_inner();
+                        let mut buf = Vec::new();
+                        buf.extend_from_slice(module.address().as_ref());
+                        buf.extend_from_slice(module.name().as_str().as_bytes());
+                        buf.extend_from_slice(function.as_str().as_bytes());
+                        Self::hash32(&buf)
+                    }
+                    TransactionPayload::Script(script) => Self::hash32(script.code()),
+                    _ => 0,
+                };
                 for pc in pcs {
-                    let cur_id = pc;
+                    let cur_id = base_id ^ pc;
                     let idx = ((cur_id ^ self.prev_loc) as usize) & (MAP_SIZE - 1);
                     let byte = &mut map[idx];
                     *byte = byte.saturating_add(1);

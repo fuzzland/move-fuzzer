@@ -40,8 +40,7 @@ impl AptosFuzzerMutator {
         mutated
     }
 
-    /// Mutate Script arguments using state's random source and ensuring
-    /// increasing values
+    /// Mutate Script arguments using state's random source (pure random)
     fn mutate_script_args(script: &mut Script, state: &mut AptosFuzzerState) -> bool {
         let args = script.args();
         if args.is_empty() {
@@ -69,81 +68,58 @@ impl AptosFuzzerMutator {
         mutated
     }
 
-    /// Mutate a byte vector using state's random source and ensuring increasing
-    /// values
+    /// Mutate a byte vector using state's random source (pure random bytes)
     fn mutate_byte_vector(bytes: &mut Vec<u8>, state: &mut AptosFuzzerState) -> bool {
-        if bytes.is_empty() {
-            // Generate monotonic u64 using mutator-local logic (no nested types)
-            let value = Self::next_u64_for_mutation(state);
-            *bytes = bcs::to_bytes(&value).unwrap_or_else(|_| vec![0u8; 8]);
-            return true;
+        let len = if bytes.is_empty() {
+            // choose a small random length
+            (1 + (state.rand_mut().next() % 16)) as usize
+        } else {
+            // keep current length
+            bytes.len()
+        };
+        bytes.resize(len, 0);
+        for b in bytes.iter_mut() {
+            *b = (state.rand_mut().next() & 0xFF) as u8;
         }
-
-        // Try to decode as different types and replace with increasing values
-        // First try u64 (most common in our contract)
-        if bytes.len() == 8 {
-            let new_value = Self::next_u64_for_mutation(state);
-            if let Ok(new_bytes) = bcs::to_bytes(&new_value) {
-                *bytes = new_bytes;
-                return true;
-            }
-        }
-
-        // Try u32
-        if bytes.len() == 4 {
-            let new_value = Self::next_u32_for_mutation(state);
-            if let Ok(new_bytes) = bcs::to_bytes(&new_value) {
-                *bytes = new_bytes;
-                return true;
-            }
-        }
-
-        // Try u8
-        if bytes.len() == 1 {
-            let new_value = Self::next_u8_for_mutation(state);
-            if let Ok(new_bytes) = bcs::to_bytes(&new_value) {
-                *bytes = new_bytes;
-                return true;
-            }
-        }
-
-        // For other sizes, generate new u64 value
-        let new_value = Self::next_u64_for_mutation(state);
-        if let Ok(new_bytes) = bcs::to_bytes(&new_value) {
-            *bytes = new_bytes;
-            return true;
-        }
-
-        false
+        true
     }
 
-    /// Mutate a TransactionArgument using state's random source and ensuring
-    /// increasing values
+    /// Mutate a TransactionArgument using state's random source (pure random)
     fn mutate_transaction_argument(arg: &mut TransactionArgument, state: &mut AptosFuzzerState) -> bool {
         match arg {
             TransactionArgument::U8(val) => {
-                *val = Self::next_u8_for_mutation(state);
+                *val = (state.rand_mut().next() & 0xFF) as u8;
                 true
             }
             TransactionArgument::U16(val) => {
-                *val = Self::next_u16_for_mutation(state);
+                *val = (state.rand_mut().next() % 65536) as u16;
                 true
             }
             TransactionArgument::U32(val) => {
-                *val = Self::next_u32_for_mutation(state);
+                *val = (state.rand_mut().next() & 0xFFFF_FFFF) as u32;
                 true
             }
             TransactionArgument::U64(val) => {
-                *val = Self::next_u64_for_mutation(state);
+                *val = state.rand_mut().next();
                 true
             }
             TransactionArgument::U128(val) => {
-                *val = Self::next_u128_for_mutation(state);
+                let hi = state.rand_mut().next() as u128;
+                let lo = state.rand_mut().next() as u128;
+                *val = (hi << 64) | lo;
                 true
             }
             TransactionArgument::U256(val) => {
-                let high_part = Self::next_u128_for_mutation(state);
-                let low_part = Self::next_u128_for_mutation(state);
+                let high_part = {
+                    let hi = state.rand_mut().next() as u128;
+                    let lo = state.rand_mut().next() as u128;
+                    (hi << 64) | lo
+                };
+                let low_part = {
+                    let hi = state.rand_mut().next() as u128;
+                    let lo = state.rand_mut().next() as u128;
+                    (hi << 64) | lo
+                };
                 let mut bytes = [0u8; 32];
                 bytes[0..16].copy_from_slice(&low_part.to_le_bytes());
                 bytes[16..32].copy_from_slice(&high_part.to_le_bytes());
@@ -151,7 +127,7 @@ impl AptosFuzzerMutator {
                 true
             }
             TransactionArgument::Bool(val) => {
-                *val = state.rand_mut().next().is_multiple_of(2);
+                *val = (state.rand_mut().next() & 1) == 0;
                 true
             }
             TransactionArgument::Address(_addr) => {
@@ -164,50 +140,23 @@ impl AptosFuzzerMutator {
                 true
             }
             TransactionArgument::U8Vector(vec) => {
-                let new_value = Self::next_u64_for_mutation(state);
-                *vec = bcs::to_bytes(&new_value).unwrap_or_else(|_| vec![0u8; 8]);
+                let len = (state.rand_mut().next() % 64) as usize;
+                vec.clear();
+                for _ in 0..len {
+                    vec.push((state.rand_mut().next() & 0xFF) as u8);
+                }
                 true
             }
             TransactionArgument::Serialized(bytes) => {
-                let new_value = Self::next_u64_for_mutation(state);
-                *bytes = bcs::to_bytes(&new_value).unwrap_or_else(|_| vec![0u8; 8]);
+                let len = (state.rand_mut().next() % 64) as usize;
+                bytes.clear();
+                bytes.resize(len, 0);
+                for b in bytes.iter_mut() {
+                    *b = (state.rand_mut().next() & 0xFF) as u8;
+                }
                 true
             }
         }
-    }
-
-    // Mutator-local monotonic generators (do not rely on state fields)
-    #[inline]
-    fn next_u8_for_mutation(state: &mut AptosFuzzerState) -> u8 {
-        // small step, monotonic modulo wrap guarded by saturating to MAX
-        let step = 1 + (state.rand_mut().next() % 4) as u8;
-        step.saturating_add(1) // ensure > 0
-    }
-
-    #[inline]
-    fn next_u16_for_mutation(state: &mut AptosFuzzerState) -> u16 {
-        let base = (state.rand_mut().next() % 1024) as u16;
-        base.saturating_add(1)
-    }
-
-    #[inline]
-    fn next_u32_for_mutation(state: &mut AptosFuzzerState) -> u32 {
-        let base = (state.rand_mut().next() % (1u64 << 20)) as u32;
-        base.saturating_add(1)
-    }
-
-    #[inline]
-    fn next_u64_for_mutation(state: &mut AptosFuzzerState) -> u64 {
-        // Start near 2^32 and grow to guarantee (value >> 32) > 0 soon
-        let base: u64 = (1u64 << 32) + (state.rand_mut().next() % (1u64 << 20));
-        base
-    }
-
-    #[inline]
-    fn next_u128_for_mutation(state: &mut AptosFuzzerState) -> u128 {
-        let hi = Self::next_u64_for_mutation(state) as u128;
-        let lo = Self::next_u64_for_mutation(state) as u128;
-        (hi << 64) | lo
     }
 }
 
