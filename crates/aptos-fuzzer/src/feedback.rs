@@ -55,8 +55,12 @@ where
         _manager: &mut EM,
         _input: &AptosFuzzerInput,
         _observers: &OT,
-        _exit_kind: &libafl::executors::ExitKind,
+        exit_kind: &libafl::executors::ExitKind,
     ) -> Result<bool, Error> {
+        // Always keep crashers
+        if matches!(exit_kind, libafl::executors::ExitKind::Crash) {
+            return Ok(true);
+        }
         // Check if the last execution produced an abort code
         if let Some(abort_code) = state.last_abort_code() {
             // If this is a new abort code we haven't seen before, it's interesting
@@ -134,8 +138,12 @@ where
         _manager: &mut EM,
         _input: &AptosFuzzerInput,
         _observers: &OT,
-        _exit_kind: &libafl::executors::ExitKind,
+        exit_kind: &libafl::executors::ExitKind,
     ) -> Result<bool, Error> {
+        // Treat VM invariant violations / panics as objectives
+        if matches!(exit_kind, libafl::executors::ExitKind::Crash) {
+            return Ok(true);
+        }
         // Check if the last execution produced an abort code
         if let Some(abort_code) = state.last_abort_code() {
             // If we have specific target codes, only those are objectives

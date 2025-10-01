@@ -5,14 +5,18 @@ use aptos_types::transaction::{ExecutionStatus, TransactionPayload, TransactionS
 use aptos_vm::aptos_vm::ExecOutcomeKind;
 use aptos_vm::AptosVM;
 use libafl::executors::{Executor, ExitKind, HasObservers};
+use libafl::observers::map::{HitcountsMapObserver, OwnedMapObserver};
+use libafl_bolts::AsSliceMut;
 use libafl::state::HasExecutions;
 use libafl_bolts::tuples::RefIndexable;
 
 use super::aptos_custom_state::AptosCustomState;
 use super::custom_state_view::CustomStateView;
 use super::types::TransactionResult;
-use crate::observer::PcIndexObserver;
+// use crate::observer::PcIndexObserver;
 use crate::{AptosFuzzerInput, AptosFuzzerState};
+
+const MAP_SIZE: usize = 1 << 16;
 
 pub struct AptosMoveExecutor<EM, Z> {
     aptos_vm: AptosVM,
@@ -20,20 +24,27 @@ pub struct AptosMoveExecutor<EM, Z> {
     // Simple execution counters for debugging
     success_count: u64,
     error_count: u64,
-    observers: (PcIndexObserver, ()),
+    observers: (HitcountsMapObserver<OwnedMapObserver<u8>>, ()),
+    prev_loc: u32,
 }
 
 impl<EM, Z> AptosMoveExecutor<EM, Z> {
     pub fn new() -> Self {
         let env = super::aptos_custom_state::AptosCustomState::default_env();
+        let edges = OwnedMapObserver::new("edges", vec![0u8; MAP_SIZE]);
+        let edges = HitcountsMapObserver::new(edges);
         Self {
             aptos_vm: AptosVM::new_fuzzer(&env),
             _phantom: PhantomData,
             success_count: 0,
             error_count: 0,
-            observers: (PcIndexObserver::new(), ()),
+            observers: (edges, ()),
+            prev_loc: 0,
         }
     }
+
+    pub fn pc_observer(&self) -> &HitcountsMapObserver<OwnedMapObserver<u8>> { &self.observers.0 }
+    pub fn pc_observer_mut(&mut self) -> &mut HitcountsMapObserver<OwnedMapObserver<u8>> { &mut self.observers.0 }
 
     pub fn execute_transaction(
         &mut self,
@@ -54,7 +65,18 @@ impl<EM, Z> AptosMoveExecutor<EM, Z> {
                     &transaction,
                     sender,
                 );
-                self.observers.0.set_pcs(pcs);
+                // Fold pcs into AFL-style edge coverage map
+                let map = self.observers.0.as_slice_mut();
+                // Reset map per-exec to record only current run (HitcountsMapObserver will bucket)
+                for b in map.iter_mut() { *b = 0; }
+                self.prev_loc = 0;
+                for pc in pcs {
+                    let cur_id = pc;
+                    let idx = ((cur_id ^ self.prev_loc) as usize) & (MAP_SIZE - 1);
+                    let byte = &mut map[idx];
+                    *byte = byte.saturating_add(1);
+                    self.prev_loc = cur_id >> 1;
+                }
                 let res = match result {
                     Ok((write_set, events)) => Ok(TransactionResult {
                         status: aptos_types::transaction::TransactionStatus::Keep(
@@ -134,7 +156,7 @@ impl<EM, Z> Executor<EM, AptosFuzzerInput, AptosFuzzerState, Z> for AptosMoveExe
 }
 
 impl<EM, Z> HasObservers for AptosMoveExecutor<EM, Z> {
-    type Observers = (PcIndexObserver, ());
+    type Observers = (HitcountsMapObserver<OwnedMapObserver<u8>>, ());
 
     fn observers(&self) -> RefIndexable<&Self::Observers, Self::Observers> {
         RefIndexable::from(&self.observers)
