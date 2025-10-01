@@ -101,7 +101,7 @@ impl<EM, Z> Executor<EM, AptosFuzzerInput, AptosFuzzerState, Z> for AptosMoveExe
                         println!("[fuzzer] abort code 1337 captured");
                     }
                 }
-                state.aptos_state_mut().apply_write_set(&result.write_set);
+                // state.aptos_state_mut().apply_write_set(&result.write_set);
                 *state.executions_mut() += 1;
                 Ok(ExitKind::Ok)
             }
