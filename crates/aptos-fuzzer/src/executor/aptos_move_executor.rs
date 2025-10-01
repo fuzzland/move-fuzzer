@@ -13,7 +13,6 @@ use libafl_bolts::AsSliceMut;
 use super::aptos_custom_state::AptosCustomState;
 use super::custom_state_view::CustomStateView;
 use super::types::TransactionResult;
-// use crate::observer::PcIndexObserver;
 use crate::{AptosFuzzerInput, AptosFuzzerState};
 
 const MAP_SIZE: usize = 1 << 16;
