@@ -1,6 +1,6 @@
 # Move fuzzer (rename it later)
 
-This is a WIP fuzzer for move smart contracts. It is built using (libafl)[https://github.com/AFLplusplus/libafl]
+This is a WIP fuzzer for move smart contracts. It is built using [LibAFL](https://github.com/AFLplusplus/libafl)
 
 ## We're hiring!
 
