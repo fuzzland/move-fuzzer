@@ -1,6 +1,8 @@
 use std::path::PathBuf;
 
 use aptos_fuzzer::{AbortCodeFeedback, AbortCodeObjective, AptosFuzzerMutator, AptosFuzzerState, AptosMoveExecutor};
+use libafl::feedbacks::{EagerOrFeedback, MaxMapFeedback, StateInitializer};
+use libafl::Evaluator;
 use clap::Parser;
 use libafl::corpus::Corpus;
 use libafl::events::SimpleEventManager;
@@ -28,17 +30,28 @@ fn main() {
     let cli = Cli::parse();
     println!("Starting Aptos Move Fuzzer...");
 
-    let feedback = AbortCodeFeedback::new();
+    // Build coverage feedback on top of executor's pc observer
+    let mut executor = AptosMoveExecutor::new();
+    let cov_feedback = MaxMapFeedback::new(executor.pc_observer());
+    let mut feedback = EagerOrFeedback::new(cov_feedback, AbortCodeFeedback::new());
     let objective = AbortCodeObjective::new();
 
     let mon = SimpleMonitor::new(|s| println!("{s}"));
     let mut mgr = SimpleEventManager::new(mon);
     let scheduler = QueueScheduler::new();
 
+    let abi = cli
+        .abi_path
+        .clone()
+        .unwrap_or_else(|| panic!("--abi-path is required (no fallback)."));
+    let module = cli
+        .module_path
+        .clone()
+        .unwrap_or_else(|| panic!("--module-path is required (no fallback)."));
+    let mut state = AptosFuzzerState::new(Some(abi), Some(module));
+    let _ = feedback.init_state(&mut state);
     let mut fuzzer = StdFuzzer::new(scheduler, feedback, objective);
 
-    let mut executor = AptosMoveExecutor::new();
-    let mut state = AptosFuzzerState::new(cli.abi_path, cli.module_path);
     let mutator = AptosFuzzerMutator::default();
 
     let mut stages = tuple_list!(StdMutationalStage::new(mutator));
@@ -48,12 +61,12 @@ fn main() {
         state.corpus().count()
     );
 
-    // Pre-execute all initial corpus inputs once (seed evaluation)
-    let ids: Vec<_> = state.corpus().ids().collect();
-    for id in ids {
-        let input = state.corpus().cloned_input_for_id(id).expect("failed to clone input");
-        let _ = libafl::Evaluator::evaluate_input(&mut fuzzer, &mut state, &mut executor, &mut mgr, &input)
-            .expect("failed to evaluate initial input");
+    // Prefer adding initial seeds via fuzzer.add_input to fire events and reflect in monitor
+    let initial_inputs = state.take_initial_inputs();
+    for input in initial_inputs {
+        let _ = fuzzer
+            .add_input(&mut state, &mut executor, &mut mgr, input)
+            .expect("failed to add initial input");
     }
 
     fuzzer
