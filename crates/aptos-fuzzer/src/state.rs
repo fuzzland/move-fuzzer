@@ -54,7 +54,6 @@ pub struct AptosFuzzerState {
 
     /// Aptos specific fields
     aptos_state: AptosCustomState,
-    last_abort_code: Option<u64>,
 }
 
 impl AptosFuzzerState {
@@ -77,7 +76,6 @@ impl AptosFuzzerState {
             corpus_id: None,
             stop_requested: false,
             stage_stack: StageStack::default(),
-            last_abort_code: None,
         };
 
         if let Some((module_id, code)) = module_bytes {
@@ -110,22 +108,12 @@ impl AptosFuzzerState {
         inputs
     }
 
-    // setup_with_fallbacks removed: callers must provide valid paths
-
     pub fn aptos_state(&self) -> &AptosCustomState {
         &self.aptos_state
     }
 
     pub fn aptos_state_mut(&mut self) -> &mut AptosCustomState {
         &mut self.aptos_state
-    }
-
-    pub fn last_abort_code(&self) -> Option<u64> {
-        self.last_abort_code
-    }
-
-    pub fn last_abort_code_mut(&mut self) -> &mut Option<u64> {
-        &mut self.last_abort_code
     }
 }
 

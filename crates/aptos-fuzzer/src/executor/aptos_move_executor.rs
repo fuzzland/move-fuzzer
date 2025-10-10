@@ -10,10 +10,17 @@ use libafl::state::HasExecutions;
 use libafl_bolts::tuples::RefIndexable;
 use libafl_bolts::AsSliceMut;
 
-use super::aptos_custom_state::AptosCustomState;
-use super::custom_state_view::CustomStateView;
-use super::types::TransactionResult;
+use crate::executor::aptos_custom_state::AptosCustomState;
+use crate::executor::custom_state_view::CustomStateView;
+use crate::executor::types::TransactionResult;
+use crate::observers::{AbortCodeObserver, ShiftOverflowObserver};
 use crate::{AptosFuzzerInput, AptosFuzzerState};
+
+// Type aliases to simplify complex observer tuple types
+type AptosObservers = (
+    HitcountsMapObserver<OwnedMapObserver<u8>>,
+    (AbortCodeObserver, (ShiftOverflowObserver, ())),
+);
 
 const MAP_SIZE: usize = 1 << 16;
 
@@ -23,7 +30,7 @@ pub struct AptosMoveExecutor<EM, Z> {
     // Simple execution counters for debugging
     success_count: u64,
     error_count: u64,
-    observers: (HitcountsMapObserver<OwnedMapObserver<u8>>, ()),
+    observers: AptosObservers,
     prev_loc: u32,
 }
 
@@ -32,12 +39,14 @@ impl<EM, Z> AptosMoveExecutor<EM, Z> {
         let env = super::aptos_custom_state::AptosCustomState::default_env();
         let edges = OwnedMapObserver::new("edges", vec![0u8; MAP_SIZE]);
         let edges = HitcountsMapObserver::new(edges);
+        let abort_obs = AbortCodeObserver::new();
+        let shift_obs = ShiftOverflowObserver::new();
         Self {
             aptos_vm: AptosVM::new_fuzzer(&env),
             _phantom: PhantomData,
             success_count: 0,
             error_count: 0,
-            observers: (edges, ()),
+            observers: (edges, (abort_obs, (shift_obs, ()))),
             prev_loc: 0,
         }
     }
@@ -65,48 +74,24 @@ impl<EM, Z> AptosMoveExecutor<EM, Z> {
         transaction: TransactionPayload,
         state: &AptosCustomState,
         sender: Option<aptos_move_core_types::account_address::AccountAddress>,
-    ) -> (core::result::Result<TransactionResult, VMStatus>, ExecOutcomeKind) {
+    ) -> (
+        core::result::Result<TransactionResult, VMStatus>,
+        ExecOutcomeKind,
+        Vec<u32>,
+        Vec<bool>,
+    ) {
         match &transaction {
             TransactionPayload::EntryFunction(_) | TransactionPayload::Script(_) => {
                 let view = CustomStateView::new(state);
-                // Use the state's runtime environment for code storage
                 let code_storage =
                     aptos_vm_types::module_and_script_storage::AsAptosCodeStorage::as_aptos_code_storage(&view, state);
 
-                let (result, pcs, outcome) = self.aptos_vm.execute_user_payload_no_checking_with_counter(
-                    state,
-                    &code_storage,
-                    &transaction,
-                    sender,
-                );
-                // Fold pcs into AFL-style edge coverage map
-                let map = self.observers.0.as_slice_mut();
-                // Reset map per-exec to record only current run (HitcountsMapObserver will
-                // bucket)
-                for b in map.iter_mut() {
-                    *b = 0;
-                }
-                self.prev_loc = 0;
-                // Build a stable per-function base id to reduce inter-function collisions
-                let base_id: u32 = match &transaction {
-                    TransactionPayload::EntryFunction(ef) => {
-                        let (module, function, _ty_args, _args) = ef.clone().into_inner();
-                        let mut buf = Vec::new();
-                        buf.extend_from_slice(module.address().as_ref());
-                        buf.extend_from_slice(module.name().as_str().as_bytes());
-                        buf.extend_from_slice(function.as_str().as_bytes());
-                        Self::hash32(&buf)
-                    }
-                    TransactionPayload::Script(script) => Self::hash32(script.code()),
-                    _ => 0,
-                };
-                for pc in pcs {
-                    let cur_id = base_id ^ pc;
-                    let idx = ((cur_id ^ self.prev_loc) as usize) & (MAP_SIZE - 1);
-                    let byte = &mut map[idx];
-                    *byte = byte.saturating_add(1);
-                    self.prev_loc = cur_id >> 1;
-                }
+                let (result, pcs, shifts, outcome) =
+                    self.aptos_vm
+                        .execute_user_payload_no_checking(state, &code_storage, &transaction, sender);
+                // Only transform minimal data for caller; no processing here
+                let shift_losses: Vec<bool> = shifts.iter().map(|ev| ev.lost_high_bits).collect();
+
                 let res = match result {
                     Ok((write_set, events)) => Ok(TransactionResult {
                         status: aptos_types::transaction::TransactionStatus::Keep(
@@ -119,7 +104,7 @@ impl<EM, Z> AptosMoveExecutor<EM, Z> {
                     }),
                     Err(e) => Err(e),
                 };
-                (res, outcome)
+                (res, outcome, pcs, shift_losses)
             }
             _ => (
                 Err(VMStatus::Error {
@@ -128,6 +113,8 @@ impl<EM, Z> AptosMoveExecutor<EM, Z> {
                     message: Some("Unsupported payload type for this executor".to_string()),
                 }),
                 ExecOutcomeKind::OtherError,
+                Vec::new(),
+                Vec::new(),
             ),
         }
     }
@@ -147,16 +134,47 @@ impl<EM, Z> Executor<EM, AptosFuzzerInput, AptosFuzzerState, Z> for AptosMoveExe
         _mgr: &mut EM,
         input: &AptosFuzzerInput,
     ) -> Result<ExitKind, libafl::Error> {
-        *state.last_abort_code_mut() = None;
-        let (result, outcome) = self.execute_transaction(input.payload().clone(), state.aptos_state(), None);
+        let (result, outcome, pcs, shift_losses) =
+            self.execute_transaction(input.payload().clone(), state.aptos_state(), None);
         match result {
             Ok(result) => {
                 self.success_count += 1;
+                // Build AFL-style edge coverage map from pcs
+                let map = self.observers.0.as_slice_mut();
+                for b in map.iter_mut() {
+                    *b = 0;
+                }
+                self.prev_loc = 0;
+                // Build a stable per-function base id to reduce inter-function collisions
+                let base_id: u32 = match input.payload() {
+                    TransactionPayload::EntryFunction(ef) => {
+                        let (module, function, _ty_args, _args) = ef.clone().into_inner();
+                        let mut buf = Vec::new();
+                        buf.extend_from_slice(module.address().as_ref());
+                        buf.extend_from_slice(module.name().as_str().as_bytes());
+                        buf.extend_from_slice(function.as_str().as_bytes());
+                        Self::hash32(&buf)
+                    }
+                    TransactionPayload::Script(script) => Self::hash32(script.code()),
+                    _ => 0,
+                };
+                for pc in pcs {
+                    let cur_id = base_id ^ pc;
+                    let idx = ((cur_id ^ self.prev_loc) as usize) & (MAP_SIZE - 1);
+                    let byte = &mut map[idx];
+                    *byte = byte.saturating_add(1);
+                    self.prev_loc = cur_id >> 1;
+                }
+                // Shift overflow observer
+                let cause_loss = shift_losses.into_iter().any(|b| b);
+                self.observers.1 .1 .0.set_cause_loss(cause_loss);
                 if let TransactionStatus::Keep(ExecutionStatus::MoveAbort { location: _, code, .. }) = &result.status {
-                    *state.last_abort_code_mut() = Some(*code);
+                    self.observers.1 .0.set_last(Some(*code));
                     if *code == 1337 {
                         println!("[fuzzer] abort code 1337 captured");
                     }
+                } else {
+                    self.observers.1 .0.set_last(None);
                 }
                 // state.aptos_state_mut().apply_write_set(&result.write_set);
                 *state.executions_mut() += 1;
@@ -164,11 +182,20 @@ impl<EM, Z> Executor<EM, AptosFuzzerInput, AptosFuzzerState, Z> for AptosMoveExe
             }
             Err(vm_status) => {
                 self.error_count += 1;
+                // Even on error, reset coverage map to a clean state for next exec
+                let map = self.observers.0.as_slice_mut();
+                for b in map.iter_mut() {
+                    *b = 0;
+                }
+                self.prev_loc = 0;
+                self.observers.1 .1 .0.set_cause_loss(false);
                 if let VMStatus::MoveAbort(ref _loc, code) = vm_status {
-                    *state.last_abort_code_mut() = Some(code);
+                    self.observers.1 .0.set_last(Some(code));
                     if code == 1337 {
                         println!("[fuzzer] abort code 1337 captured");
                     }
+                } else {
+                    self.observers.1 .0.set_last(None);
                 }
                 let exit_kind = match outcome {
                     ExecOutcomeKind::Ok => ExitKind::Ok,
@@ -186,7 +213,7 @@ impl<EM, Z> Executor<EM, AptosFuzzerInput, AptosFuzzerState, Z> for AptosMoveExe
 }
 
 impl<EM, Z> HasObservers for AptosMoveExecutor<EM, Z> {
-    type Observers = (HitcountsMapObserver<OwnedMapObserver<u8>>, ());
+    type Observers = AptosObservers;
 
     fn observers(&self) -> RefIndexable<&Self::Observers, Self::Observers> {
         RefIndexable::from(&self.observers)

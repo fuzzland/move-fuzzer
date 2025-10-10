@@ -1,17 +1,19 @@
 use std::path::PathBuf;
 
-use aptos_fuzzer::{AbortCodeFeedback, AbortCodeObjective, AptosFuzzerMutator, AptosFuzzerState, AptosMoveExecutor};
-use libafl::feedbacks::{EagerOrFeedback, MaxMapFeedback, StateInitializer};
-use libafl::Evaluator;
+use aptos_fuzzer::{
+    AbortCodeFeedback, AbortCodeObjective, AptosFuzzerMutator, AptosFuzzerState, AptosMoveExecutor,
+    ShiftOverflowObjective,
+};
 use clap::Parser;
 use libafl::corpus::Corpus;
 use libafl::events::SimpleEventManager;
+use libafl::feedbacks::{EagerOrFeedback, MaxMapFeedback, StateInitializer};
 use libafl::fuzzer::Fuzzer;
 use libafl::monitors::SimpleMonitor;
 use libafl::schedulers::QueueScheduler;
 use libafl::stages::StdMutationalStage;
 use libafl::state::HasCorpus;
-use libafl::StdFuzzer;
+use libafl::{Evaluator, StdFuzzer};
 use libafl_bolts::tuples::tuple_list;
 
 #[derive(Debug, Parser)]
@@ -34,7 +36,7 @@ fn main() {
     let mut executor = AptosMoveExecutor::new();
     let cov_feedback = MaxMapFeedback::new(executor.pc_observer());
     let mut feedback = EagerOrFeedback::new(cov_feedback, AbortCodeFeedback::new());
-    let objective = AbortCodeObjective::new();
+    let objective = EagerOrFeedback::new(ShiftOverflowObjective::new(), AbortCodeObjective::new());
 
     let mon = SimpleMonitor::new(|s| println!("{s}"));
     let mut mgr = SimpleEventManager::new(mon);
@@ -53,7 +55,6 @@ fn main() {
     let mut fuzzer = StdFuzzer::new(scheduler, feedback, objective);
 
     let mutator = AptosFuzzerMutator::default();
-
     let mut stages = tuple_list!(StdMutationalStage::new(mutator));
 
     println!(

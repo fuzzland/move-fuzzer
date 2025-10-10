@@ -4,9 +4,11 @@ use std::collections::HashSet;
 use libafl::feedbacks::{Feedback, StateInitializer};
 use libafl::observers::ObserversTuple;
 use libafl::Error;
+use libafl_bolts::tuples::{Handle, MatchNameRef};
 use libafl_bolts::Named;
 use serde::{Deserialize, Serialize};
 
+use crate::observers::{AbortCodeObserver, ShiftOverflowObserver};
 use crate::{AptosFuzzerInput, AptosFuzzerState};
 
 /// Feedback that tracks abort codes encountered during execution.
@@ -19,7 +21,6 @@ pub struct AbortCodeFeedback {
 }
 
 impl AbortCodeFeedback {
-    /// Creates a new AbortCodeFeedback
     pub fn new() -> Self {
         Self {
             seen_abort_codes: HashSet::new(),
@@ -27,7 +28,6 @@ impl AbortCodeFeedback {
         }
     }
 
-    /// Creates a new AbortCodeFeedback with a custom name
     pub fn with_name(name: &'static str) -> Self {
         Self {
             seen_abort_codes: HashSet::new(),
@@ -51,10 +51,10 @@ where
     #[allow(clippy::wrong_self_convention)]
     fn is_interesting(
         &mut self,
-        state: &mut AptosFuzzerState,
+        _state: &mut AptosFuzzerState,
         _manager: &mut EM,
         _input: &AptosFuzzerInput,
-        _observers: &OT,
+        observers: &OT,
         exit_kind: &libafl::executors::ExitKind,
     ) -> Result<bool, Error> {
         // Always keep crashers
@@ -62,7 +62,13 @@ where
             return Ok(true);
         }
         // Check if the last execution produced an abort code
-        if let Some(abort_code) = state.last_abort_code() {
+        let mut code_opt: Option<u64> = None;
+        // Access AbortCodeObserver through Handle
+        let abort_handle: Handle<AbortCodeObserver> = Handle::new(Cow::Borrowed("AbortCodeObserver"));
+        if let Some(obs_ref) = observers.get(&abort_handle) {
+            code_opt = obs_ref.last();
+        }
+        if let Some(abort_code) = code_opt {
             // If this is a new abort code we haven't seen before, it's interesting
             if !self.seen_abort_codes.contains(&abort_code) {
                 self.seen_abort_codes.insert(abort_code);
@@ -92,8 +98,6 @@ pub struct AbortCodeObjective {
 }
 
 impl AbortCodeObjective {
-    /// Creates a new AbortCodeObjective that treats any abort code as an
-    /// objective
     pub fn new() -> Self {
         Self {
             target_abort_codes: HashSet::new(),
@@ -101,8 +105,6 @@ impl AbortCodeObjective {
         }
     }
 
-    /// Creates a new AbortCodeObjective that only treats specific abort codes
-    /// as objectives
     pub fn with_target_codes(codes: &[u64]) -> Self {
         Self {
             target_abort_codes: codes.iter().cloned().collect(),
@@ -110,7 +112,6 @@ impl AbortCodeObjective {
         }
     }
 
-    /// Creates a new AbortCodeObjective with a custom name
     pub fn with_name(name: &'static str) -> Self {
         Self {
             target_abort_codes: HashSet::new(),
@@ -134,10 +135,10 @@ where
     #[allow(clippy::wrong_self_convention)]
     fn is_interesting(
         &mut self,
-        state: &mut AptosFuzzerState,
+        _state: &mut AptosFuzzerState,
         _manager: &mut EM,
         _input: &AptosFuzzerInput,
-        _observers: &OT,
+        observers: &OT,
         exit_kind: &libafl::executors::ExitKind,
     ) -> Result<bool, Error> {
         // Treat VM invariant violations / panics as objectives
@@ -145,7 +146,13 @@ where
             return Ok(true);
         }
         // Check if the last execution produced an abort code
-        if let Some(abort_code) = state.last_abort_code() {
+        let mut code_opt: Option<u64> = None;
+        // Access AbortCodeObserver through Handle
+        let abort_handle: Handle<AbortCodeObserver> = Handle::new(Cow::Borrowed("AbortCodeObserver"));
+        if let Some(obs_ref) = observers.get(&abort_handle) {
+            code_opt = obs_ref.last();
+        }
+        if let Some(abort_code) = code_opt {
             // If we have specific target codes, only those are objectives
             if !self.target_abort_codes.is_empty() {
                 if self.target_abort_codes.contains(&abort_code) {
@@ -167,6 +174,95 @@ where
         _observers: &OT,
         _testcase: &mut libafl::corpus::Testcase<AptosFuzzerInput>,
     ) -> Result<(), Error> {
+        // We could add metadata about the abort code to the testcase here
         Ok(())
+    }
+}
+
+/// Marks inputs with shift overflow as interesting.
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+pub struct ShiftOverflowFeedback {
+    name: Cow<'static, str>,
+}
+
+impl ShiftOverflowFeedback {
+    pub fn new() -> Self {
+        Self {
+            name: Cow::Borrowed("ShiftOverflowFeedback"),
+        }
+    }
+}
+
+impl Named for ShiftOverflowFeedback {
+    fn name(&self) -> &Cow<'static, str> {
+        &self.name
+    }
+}
+
+impl StateInitializer<AptosFuzzerState> for ShiftOverflowFeedback {}
+
+impl<EM, OT> Feedback<EM, AptosFuzzerInput, OT, AptosFuzzerState> for ShiftOverflowFeedback
+where
+    OT: ObserversTuple<AptosFuzzerInput, AptosFuzzerState>,
+{
+    fn is_interesting(
+        &mut self,
+        _state: &mut AptosFuzzerState,
+        _manager: &mut EM,
+        _input: &AptosFuzzerInput,
+        observers: &OT,
+        _exit_kind: &libafl::executors::ExitKind,
+    ) -> Result<bool, Error> {
+        let mut cause_loss = false;
+        // Access ShiftOverflowObserver through Handle
+        let shift_handle: Handle<ShiftOverflowObserver> = Handle::new(Cow::Borrowed("ShiftOverflowObserver"));
+        if let Some(obs_ref) = observers.get(&shift_handle) {
+            cause_loss = obs_ref.cause_loss();
+        }
+        Ok(cause_loss)
+    }
+}
+
+/// Treats shift overflow as a bug.
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+pub struct ShiftOverflowObjective {
+    name: Cow<'static, str>,
+}
+
+impl ShiftOverflowObjective {
+    pub fn new() -> Self {
+        Self {
+            name: Cow::Borrowed("ShiftOverflowObjective"),
+        }
+    }
+}
+
+impl Named for ShiftOverflowObjective {
+    fn name(&self) -> &Cow<'static, str> {
+        &self.name
+    }
+}
+
+impl StateInitializer<AptosFuzzerState> for ShiftOverflowObjective {}
+
+impl<EM, OT> Feedback<EM, AptosFuzzerInput, OT, AptosFuzzerState> for ShiftOverflowObjective
+where
+    OT: ObserversTuple<AptosFuzzerInput, AptosFuzzerState>,
+{
+    fn is_interesting(
+        &mut self,
+        _state: &mut AptosFuzzerState,
+        _manager: &mut EM,
+        _input: &AptosFuzzerInput,
+        observers: &OT,
+        _exit_kind: &libafl::executors::ExitKind,
+    ) -> Result<bool, Error> {
+        let mut cause_loss = false;
+        // Access ShiftOverflowObserver through Handle
+        let shift_handle: Handle<ShiftOverflowObserver> = Handle::new(Cow::Borrowed("ShiftOverflowObserver"));
+        if let Some(obs_ref) = observers.get(&shift_handle) {
+            cause_loss = obs_ref.cause_loss();
+        }
+        Ok(cause_loss)
     }
 }
