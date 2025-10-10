@@ -10,10 +10,11 @@ use libafl::state::HasExecutions;
 use libafl_bolts::tuples::RefIndexable;
 use libafl_bolts::AsSliceMut;
 
-use super::custom_state_view::CustomStateView;
-use super::types::TransactionResult;
+use crate::executor::custom_state_view::CustomStateView;
+use crate::executor::types::TransactionResult;
 use crate::{AptosFuzzerInput, AptosFuzzerState};
 use crate::observers::{AbortCodeObserver, ShiftOverflowObserver};
+use crate::executor::aptos_custom_state::AptosCustomState;
 
 // Type aliases to simplify complex observer tuple types
 type AptosObservers = (
@@ -73,7 +74,7 @@ impl<EM, Z> AptosMoveExecutor<EM, Z> {
     pub fn execute_transaction(
         &mut self,
         transaction: TransactionPayload,
-        state: &AptosFuzzerState,
+        state: &AptosCustomState,
         sender: Option<aptos_move_core_types::account_address::AccountAddress>,
     ) -> (
         core::result::Result<TransactionResult, VMStatus>,
@@ -83,16 +84,15 @@ impl<EM, Z> AptosMoveExecutor<EM, Z> {
     ) {
         match &transaction {
             TransactionPayload::EntryFunction(_) | TransactionPayload::Script(_) => {
-                let aptos_state = state.aptos_state();
-                let view = CustomStateView::new(aptos_state);
+                let view = CustomStateView::new(state);
                 let code_storage = aptos_vm_types::module_and_script_storage::AsAptosCodeStorage::as_aptos_code_storage(
                     &view,
-                    aptos_state,
+                    state,
                 );
 
                 let (result, pcs, shifts, outcome) =
                     self.aptos_vm
-                        .execute_user_payload_no_checking(aptos_state, &code_storage, &transaction, sender);
+                        .execute_user_payload_no_checking(state, &code_storage, &transaction, sender);
                 // Only transform minimal data for caller; no processing here
                 let shift_losses: Vec<bool> = shifts.iter().map(|ev| ev.lost_high_bits).collect();
 
@@ -138,7 +138,7 @@ impl<EM, Z> Executor<EM, AptosFuzzerInput, AptosFuzzerState, Z> for AptosMoveExe
         _mgr: &mut EM,
         input: &AptosFuzzerInput,
     ) -> Result<ExitKind, libafl::Error> {
-        let (result, outcome, pcs, shift_losses) = self.execute_transaction(input.payload().clone(), state, None);
+        let (result, outcome, pcs, shift_losses) = self.execute_transaction(input.payload().clone(), state.aptos_state(), None);
         match result {
             Ok(result) => {
                 self.success_count += 1;
