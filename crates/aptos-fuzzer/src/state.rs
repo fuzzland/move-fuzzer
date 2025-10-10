@@ -115,8 +115,6 @@ impl AptosFuzzerState {
     pub fn aptos_state_mut(&mut self) -> &mut AptosCustomState {
         &mut self.aptos_state
     }
-
-    // no per-execution flags kept in state anymore
 }
 
 // initial inputs

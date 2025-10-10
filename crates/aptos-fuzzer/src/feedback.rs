@@ -4,12 +4,12 @@ use std::collections::HashSet;
 use libafl::feedbacks::{Feedback, StateInitializer};
 use libafl::observers::ObserversTuple;
 use libafl::Error;
-use libafl_bolts::Named;
 use libafl_bolts::tuples::{Handle, MatchNameRef};
+use libafl_bolts::Named;
 use serde::{Deserialize, Serialize};
 
-use crate::{AptosFuzzerInput, AptosFuzzerState};
 use crate::observers::{AbortCodeObserver, ShiftOverflowObserver};
+use crate::{AptosFuzzerInput, AptosFuzzerState};
 
 /// Feedback that tracks abort codes encountered during execution.
 /// Considers an input interesting if it produces a new abort code that hasn't

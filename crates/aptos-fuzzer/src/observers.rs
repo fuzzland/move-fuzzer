@@ -43,12 +43,19 @@ pub struct ShiftOverflowObserver {
 
 impl ShiftOverflowObserver {
     pub fn new() -> Self {
-        Self { name: Cow::Borrowed("ShiftOverflowObserver"), cause_loss: false }
+        Self {
+            name: Cow::Borrowed("ShiftOverflowObserver"),
+            cause_loss: false,
+        }
     }
 
-    pub fn cause_loss(&self) -> bool { self.cause_loss }
+    pub fn cause_loss(&self) -> bool {
+        self.cause_loss
+    }
 
-    pub fn set_cause_loss(&mut self, v: bool) { self.cause_loss = v; }
+    pub fn set_cause_loss(&mut self, v: bool) {
+        self.cause_loss = v;
+    }
 }
 
 impl Named for ShiftOverflowObserver {
@@ -58,5 +65,3 @@ impl Named for ShiftOverflowObserver {
 }
 
 impl<I, S> Observer<I, S> for ShiftOverflowObserver {}
-
-
