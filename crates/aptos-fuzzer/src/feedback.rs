@@ -5,9 +5,11 @@ use libafl::feedbacks::{Feedback, StateInitializer};
 use libafl::observers::ObserversTuple;
 use libafl::Error;
 use libafl_bolts::Named;
+use libafl_bolts::tuples::MatchName;
 use serde::{Deserialize, Serialize};
 
 use crate::{AptosFuzzerInput, AptosFuzzerState};
+use crate::observers::{AbortCodeObserver, ShiftOverflowObserver};
 
 /// Feedback that tracks abort codes encountered during execution.
 /// Considers an input interesting if it produces a new abort code that hasn't
@@ -49,10 +51,10 @@ where
     #[allow(clippy::wrong_self_convention)]
     fn is_interesting(
         &mut self,
-        state: &mut AptosFuzzerState,
+        _state: &mut AptosFuzzerState,
         _manager: &mut EM,
         _input: &AptosFuzzerInput,
-        _observers: &OT,
+        observers: &OT,
         exit_kind: &libafl::executors::ExitKind,
     ) -> Result<bool, Error> {
         // Always keep crashers
@@ -60,7 +62,11 @@ where
             return Ok(true);
         }
         // Check if the last execution produced an abort code
-        if let Some(abort_code) = state.last_abort_code() {
+        let mut code_opt: Option<u64> = None;
+        if let Some(obs) = observers.match_name::<AbortCodeObserver>("AbortCodeObserver") {
+            code_opt = obs.last();
+        }
+        if let Some(abort_code) = code_opt {
             // If this is a new abort code we haven't seen before, it's interesting
             if !self.seen_abort_codes.contains(&abort_code) {
                 self.seen_abort_codes.insert(abort_code);
@@ -127,10 +133,10 @@ where
     #[allow(clippy::wrong_self_convention)]
     fn is_interesting(
         &mut self,
-        state: &mut AptosFuzzerState,
+        _state: &mut AptosFuzzerState,
         _manager: &mut EM,
         _input: &AptosFuzzerInput,
-        _observers: &OT,
+        observers: &OT,
         exit_kind: &libafl::executors::ExitKind,
     ) -> Result<bool, Error> {
         // Treat VM invariant violations / panics as objectives
@@ -138,7 +144,11 @@ where
             return Ok(true);
         }
         // Check if the last execution produced an abort code
-        if let Some(abort_code) = state.last_abort_code() {
+        let mut code_opt: Option<u64> = None;
+        if let Some(obs) = observers.match_name::<AbortCodeObserver>("AbortCodeObserver") {
+            code_opt = obs.last();
+        }
+        if let Some(abort_code) = code_opt {
             // If we have specific target codes, only those are objectives
             if !self.target_abort_codes.is_empty() {
                 if self.target_abort_codes.contains(&abort_code) {
@@ -193,18 +203,17 @@ where
 {
     fn is_interesting(
         &mut self,
-        state: &mut AptosFuzzerState,
+        _state: &mut AptosFuzzerState,
         _manager: &mut EM,
         _input: &AptosFuzzerInput,
-        _observers: &OT,
+        observers: &OT,
         _exit_kind: &libafl::executors::ExitKind,
     ) -> Result<bool, Error> {
-        let flag = state.shift_overflow();
-        if flag {
-            state.set_shift_overflow(false);
-            return Ok(true);
+        let mut cause_loss = false;
+        if let Some(obs) = observers.match_name::<ShiftOverflowObserver>("ShiftOverflowObserver") {
+            cause_loss = obs.cause_loss();
         }
-        Ok(false)
+        Ok(cause_loss)
     }
 }
 
@@ -236,12 +245,16 @@ where
 {
     fn is_interesting(
         &mut self,
-        state: &mut AptosFuzzerState,
+        _state: &mut AptosFuzzerState,
         _manager: &mut EM,
         _input: &AptosFuzzerInput,
-        _observers: &OT,
+        observers: &OT,
         _exit_kind: &libafl::executors::ExitKind,
     ) -> Result<bool, Error> {
-        Ok(state.shift_overflow())
+        let mut cause_loss = false;
+        if let Some(obs) = observers.match_name::<ShiftOverflowObserver>("ShiftOverflowObserver") {
+            cause_loss = obs.cause_loss();
+        }
+        Ok(cause_loss)
     }
 }

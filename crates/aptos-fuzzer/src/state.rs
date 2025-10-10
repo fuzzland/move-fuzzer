@@ -54,8 +54,6 @@ pub struct AptosFuzzerState {
 
     /// Aptos specific fields
     aptos_state: AptosCustomState,
-    last_abort_code: Option<u64>,
-    shift_overflow: bool,
 }
 
 impl AptosFuzzerState {
@@ -78,8 +76,6 @@ impl AptosFuzzerState {
             corpus_id: None,
             stop_requested: false,
             stage_stack: StageStack::default(),
-            last_abort_code: None,
-            shift_overflow: false,
         };
 
         if let Some((module_id, code)) = module_bytes {
@@ -120,20 +116,7 @@ impl AptosFuzzerState {
         &mut self.aptos_state
     }
 
-    pub fn last_abort_code(&self) -> Option<u64> {
-        self.last_abort_code
-    }
-
-    pub fn last_abort_code_mut(&mut self) -> &mut Option<u64> {
-        &mut self.last_abort_code
-    }
-
-    pub fn set_shift_overflow(&mut self, v: bool) {
-        self.shift_overflow = v;
-    }
-    pub fn shift_overflow(&self) -> bool {
-        self.shift_overflow
-    }
+    // no per-execution flags kept in state anymore
 }
 
 // initial inputs
