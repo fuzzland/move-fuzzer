@@ -73,7 +73,7 @@ impl<EM, Z> AptosMoveExecutor<EM, Z> {
     pub fn execute_transaction(
         &mut self,
         transaction: TransactionPayload,
-        state: &mut AptosFuzzerState,
+        state: &AptosFuzzerState,
         sender: Option<aptos_move_core_types::account_address::AccountAddress>,
     ) -> (
         core::result::Result<TransactionResult, VMStatus>,
