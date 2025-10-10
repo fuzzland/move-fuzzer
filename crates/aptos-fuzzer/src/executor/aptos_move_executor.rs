@@ -10,7 +10,6 @@ use libafl::state::HasExecutions;
 use libafl_bolts::tuples::RefIndexable;
 use libafl_bolts::AsSliceMut;
 
-use super::aptos_custom_state::AptosCustomState;
 use super::custom_state_view::CustomStateView;
 use super::types::TransactionResult;
 use crate::{AptosFuzzerInput, AptosFuzzerState};
@@ -63,22 +62,21 @@ impl<EM, Z> AptosMoveExecutor<EM, Z> {
     pub fn execute_transaction(
         &mut self,
         transaction: TransactionPayload,
-        state: &AptosCustomState,
+        state: &mut AptosFuzzerState,
         sender: Option<aptos_move_core_types::account_address::AccountAddress>,
     ) -> (core::result::Result<TransactionResult, VMStatus>, ExecOutcomeKind) {
         match &transaction {
             TransactionPayload::EntryFunction(_) | TransactionPayload::Script(_) => {
-                let view = CustomStateView::new(state);
-                // Use the state's runtime environment for code storage
-                let code_storage =
-                    aptos_vm_types::module_and_script_storage::AsAptosCodeStorage::as_aptos_code_storage(&view, state);
-
-                let (result, pcs, outcome) = self.aptos_vm.execute_user_payload_no_checking_with_counter(
-                    state,
-                    &code_storage,
-                    &transaction,
-                    sender,
+                let aptos_state = state.aptos_state();
+                let view = CustomStateView::new(aptos_state);
+                let code_storage = aptos_vm_types::module_and_script_storage::AsAptosCodeStorage::as_aptos_code_storage(
+                    &view,
+                    aptos_state,
                 );
+
+                let (result, pcs, shifts, outcome) =
+                    self.aptos_vm
+                        .execute_user_payload_no_checking(aptos_state, &code_storage, &transaction, sender);
                 // Fold pcs into AFL-style edge coverage map
                 let map = self.observers.0.as_slice_mut();
                 // Reset map per-exec to record only current run (HitcountsMapObserver will
@@ -107,6 +105,16 @@ impl<EM, Z> AptosMoveExecutor<EM, Z> {
                     *byte = byte.saturating_add(1);
                     self.prev_loc = cur_id >> 1;
                 }
+                // Check for shift overflow
+                let mut lost = false;
+                for ev in shifts.iter() {
+                    if ev.lost_high_bits {
+                        lost = true;
+                        break;
+                    }
+                }
+                state.set_shift_overflow(lost);
+
                 let res = match result {
                     Ok((write_set, events)) => Ok(TransactionResult {
                         status: aptos_types::transaction::TransactionStatus::Keep(
@@ -148,7 +156,8 @@ impl<EM, Z> Executor<EM, AptosFuzzerInput, AptosFuzzerState, Z> for AptosMoveExe
         input: &AptosFuzzerInput,
     ) -> Result<ExitKind, libafl::Error> {
         *state.last_abort_code_mut() = None;
-        let (result, outcome) = self.execute_transaction(input.payload().clone(), state.aptos_state(), None);
+        state.set_shift_overflow(false);
+        let (result, outcome) = self.execute_transaction(input.payload().clone(), state, None);
         match result {
             Ok(result) => {
                 self.success_count += 1;

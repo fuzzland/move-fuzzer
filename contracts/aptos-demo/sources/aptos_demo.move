@@ -118,6 +118,17 @@ module aptos_demo::shl_demo {
         let upper_bits = output >> 32;
         assert!(upper_bits == 0, 1337);
     }
+
+    /// Test shift overflow detection with u32 value (0x43214321) shifted left by 'bit'.
+    public entry fun test_shift_overflow(_account: &signer, bit: u8) {
+        let value: u32 = 0x43214321;
+        let result = value << bit;
+        event::emit<ShiftLeftEvent>(ShiftLeftEvent { 
+            value: (value as u64), 
+            shift_amount: bit, 
+            result: (result as u64) 
+        });
+    }
 }
 
 

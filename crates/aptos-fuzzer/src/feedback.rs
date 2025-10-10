@@ -19,7 +19,6 @@ pub struct AbortCodeFeedback {
 }
 
 impl AbortCodeFeedback {
-    /// Creates a new AbortCodeFeedback
     pub fn new() -> Self {
         Self {
             seen_abort_codes: HashSet::new(),
@@ -27,7 +26,6 @@ impl AbortCodeFeedback {
         }
     }
 
-    /// Creates a new AbortCodeFeedback with a custom name
     pub fn with_name(name: &'static str) -> Self {
         Self {
             seen_abort_codes: HashSet::new(),
@@ -92,8 +90,6 @@ pub struct AbortCodeObjective {
 }
 
 impl AbortCodeObjective {
-    /// Creates a new AbortCodeObjective that treats any abort code as an
-    /// objective
     pub fn new() -> Self {
         Self {
             target_abort_codes: HashSet::new(),
@@ -101,8 +97,6 @@ impl AbortCodeObjective {
         }
     }
 
-    /// Creates a new AbortCodeObjective that only treats specific abort codes
-    /// as objectives
     pub fn with_target_codes(codes: &[u64]) -> Self {
         Self {
             target_abort_codes: codes.iter().cloned().collect(),
@@ -110,7 +104,6 @@ impl AbortCodeObjective {
         }
     }
 
-    /// Creates a new AbortCodeObjective with a custom name
     pub fn with_name(name: &'static str) -> Self {
         Self {
             target_abort_codes: HashSet::new(),
@@ -167,6 +160,88 @@ where
         _observers: &OT,
         _testcase: &mut libafl::corpus::Testcase<AptosFuzzerInput>,
     ) -> Result<(), Error> {
+        // We could add metadata about the abort code to the testcase here
         Ok(())
+    }
+}
+
+/// Marks inputs with shift overflow as interesting.
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+pub struct ShiftOverflowFeedback {
+    name: Cow<'static, str>,
+}
+
+impl ShiftOverflowFeedback {
+    pub fn new() -> Self {
+        Self {
+            name: Cow::Borrowed("ShiftOverflowFeedback"),
+        }
+    }
+}
+
+impl Named for ShiftOverflowFeedback {
+    fn name(&self) -> &Cow<'static, str> {
+        &self.name
+    }
+}
+
+impl StateInitializer<AptosFuzzerState> for ShiftOverflowFeedback {}
+
+impl<EM, OT> Feedback<EM, AptosFuzzerInput, OT, AptosFuzzerState> for ShiftOverflowFeedback
+where
+    OT: ObserversTuple<AptosFuzzerInput, AptosFuzzerState>,
+{
+    fn is_interesting(
+        &mut self,
+        state: &mut AptosFuzzerState,
+        _manager: &mut EM,
+        _input: &AptosFuzzerInput,
+        _observers: &OT,
+        _exit_kind: &libafl::executors::ExitKind,
+    ) -> Result<bool, Error> {
+        let flag = state.shift_overflow();
+        if flag {
+            state.set_shift_overflow(false);
+            return Ok(true);
+        }
+        Ok(false)
+    }
+}
+
+/// Treats shift overflow as a bug.
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+pub struct ShiftOverflowObjective {
+    name: Cow<'static, str>,
+}
+
+impl ShiftOverflowObjective {
+    pub fn new() -> Self {
+        Self {
+            name: Cow::Borrowed("ShiftOverflowObjective"),
+        }
+    }
+}
+
+impl Named for ShiftOverflowObjective {
+    fn name(&self) -> &Cow<'static, str> {
+        &self.name
+    }
+}
+
+impl StateInitializer<AptosFuzzerState> for ShiftOverflowObjective {}
+
+impl<EM, OT> Feedback<EM, AptosFuzzerInput, OT, AptosFuzzerState> for ShiftOverflowObjective
+where
+    OT: ObserversTuple<AptosFuzzerInput, AptosFuzzerState>,
+{
+    fn is_interesting(
+        &mut self,
+        state: &mut AptosFuzzerState,
+        _manager: &mut EM,
+        _input: &AptosFuzzerInput,
+        _observers: &OT,
+        _exit_kind: &libafl::executors::ExitKind,
+    ) -> Result<bool, Error> {
+        Ok(state.shift_overflow())
     }
 }
