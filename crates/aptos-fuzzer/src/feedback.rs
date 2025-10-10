@@ -5,7 +5,7 @@ use libafl::feedbacks::{Feedback, StateInitializer};
 use libafl::observers::ObserversTuple;
 use libafl::Error;
 use libafl_bolts::Named;
-use libafl_bolts::tuples::MatchName;
+use libafl_bolts::tuples::{Handle, MatchNameRef};
 use serde::{Deserialize, Serialize};
 
 use crate::{AptosFuzzerInput, AptosFuzzerState};
@@ -63,8 +63,10 @@ where
         }
         // Check if the last execution produced an abort code
         let mut code_opt: Option<u64> = None;
-        if let Some(obs) = observers.match_name::<AbortCodeObserver>("AbortCodeObserver") {
-            code_opt = obs.last();
+        // Access AbortCodeObserver through Handle
+        let abort_handle: Handle<AbortCodeObserver> = Handle::new(Cow::Borrowed("AbortCodeObserver"));
+        if let Some(obs_ref) = observers.get(&abort_handle) {
+            code_opt = obs_ref.last();
         }
         if let Some(abort_code) = code_opt {
             // If this is a new abort code we haven't seen before, it's interesting
@@ -145,8 +147,10 @@ where
         }
         // Check if the last execution produced an abort code
         let mut code_opt: Option<u64> = None;
-        if let Some(obs) = observers.match_name::<AbortCodeObserver>("AbortCodeObserver") {
-            code_opt = obs.last();
+        // Access AbortCodeObserver through Handle
+        let abort_handle: Handle<AbortCodeObserver> = Handle::new(Cow::Borrowed("AbortCodeObserver"));
+        if let Some(obs_ref) = observers.get(&abort_handle) {
+            code_opt = obs_ref.last();
         }
         if let Some(abort_code) = code_opt {
             // If we have specific target codes, only those are objectives
@@ -210,8 +214,10 @@ where
         _exit_kind: &libafl::executors::ExitKind,
     ) -> Result<bool, Error> {
         let mut cause_loss = false;
-        if let Some(obs) = observers.match_name::<ShiftOverflowObserver>("ShiftOverflowObserver") {
-            cause_loss = obs.cause_loss();
+        // Access ShiftOverflowObserver through Handle
+        let shift_handle: Handle<ShiftOverflowObserver> = Handle::new(Cow::Borrowed("ShiftOverflowObserver"));
+        if let Some(obs_ref) = observers.get(&shift_handle) {
+            cause_loss = obs_ref.cause_loss();
         }
         Ok(cause_loss)
     }
@@ -252,8 +258,10 @@ where
         _exit_kind: &libafl::executors::ExitKind,
     ) -> Result<bool, Error> {
         let mut cause_loss = false;
-        if let Some(obs) = observers.match_name::<ShiftOverflowObserver>("ShiftOverflowObserver") {
-            cause_loss = obs.cause_loss();
+        // Access ShiftOverflowObserver through Handle
+        let shift_handle: Handle<ShiftOverflowObserver> = Handle::new(Cow::Borrowed("ShiftOverflowObserver"));
+        if let Some(obs_ref) = observers.get(&shift_handle) {
+            cause_loss = obs_ref.cause_loss();
         }
         Ok(cause_loss)
     }

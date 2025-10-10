@@ -15,6 +15,18 @@ use super::types::TransactionResult;
 use crate::{AptosFuzzerInput, AptosFuzzerState};
 use crate::observers::{AbortCodeObserver, ShiftOverflowObserver};
 
+// Type aliases to simplify complex observer tuple types
+type AptosObservers = (
+    HitcountsMapObserver<OwnedMapObserver<u8>>,
+    (
+        AbortCodeObserver,
+        (
+            ShiftOverflowObserver,
+            (),
+        ),
+    ),
+);
+
 const MAP_SIZE: usize = 1 << 16;
 
 pub struct AptosMoveExecutor<EM, Z> {
@@ -23,16 +35,7 @@ pub struct AptosMoveExecutor<EM, Z> {
     // Simple execution counters for debugging
     success_count: u64,
     error_count: u64,
-    observers: (
-        HitcountsMapObserver<OwnedMapObserver<u8>>,
-        (
-            AbortCodeObserver,
-            (
-                ShiftOverflowObserver,
-                (),
-            ),
-        ),
-    ),
+    observers: AptosObservers,
     prev_loc: u32,
 }
 
@@ -205,16 +208,7 @@ impl<EM, Z> Executor<EM, AptosFuzzerInput, AptosFuzzerState, Z> for AptosMoveExe
 }
 
 impl<EM, Z> HasObservers for AptosMoveExecutor<EM, Z> {
-    type Observers = (
-        HitcountsMapObserver<OwnedMapObserver<u8>>,
-        (
-            AbortCodeObserver,
-            (
-                ShiftOverflowObserver,
-                (),
-            ),
-        ),
-    );
+    type Observers = AptosObservers;
 
     fn observers(&self) -> RefIndexable<&Self::Observers, Self::Observers> {
         RefIndexable::from(&self.observers)
