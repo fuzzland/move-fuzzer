@@ -57,3 +57,34 @@ Build the project:
 ```
 
 You can use each steps in `./scripts/setup_aptos.sh` to run them individually.
+
+# Coding
+
+## Source code
+
+- `bin/libafl-aptos` contains the code for the fuzzer's command-line interface.
+  `bin/libafl-aptos/src/main.rs` parses CLI arguments and runs fuzzing.
+
+- `contracts` contains example Move smart contracts to run and evaluate the fuzzer.
+- `crates/aptos-fuzzer` is the main directory for the fuzzer.
+  - `executor` runs the smart contracts (Aptos executor and custom state).
+  - `feedback.rs` implements feedback/objectives (e.g., abort codes, shift overflow) to mark interesting inputs.
+  - `input.rs` defines `AptosFuzzerInput` wrapping `TransactionPayload`.
+  - `mutator.rs` mutates selected seeds (entry function args and script args).
+  - `observers.rs` monitors for bugs (abort codes, shift overflow flags).
+  - `state.rs` manages the fuzzer state and corpus; seeds inputs from ABIs and deploys the module for execution.
+
+## Style and testing
+
+- After introducing modifications and new code,
+  try to use `clippy` to and fix all the warnings and errors.
+  `cargo clippy`.
+- After modifications, use the tests to check integration.
+  `cargo test`.
+- Explain you code in comments, but make your explanation concise and precise.
+
+# Scratch space
+
+NEVER create throw away idea exploration files in the top directory of the repo.
+Use a `.agents/sandbox/` directory for those.
+They will never be committed.
