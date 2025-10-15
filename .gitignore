@@ -30,3 +30,6 @@ target
 **/example-data*
 test-report.md
 **/build/
+
+# temp directory for coding agent's files
+/.agents/
