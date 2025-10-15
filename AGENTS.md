@@ -82,6 +82,9 @@ You can use each steps in `./scripts/setup_aptos.sh` to run them individually.
 - After modifications, use the tests to check integration.
   `cargo test`.
 - Explain you code in comments, but make your explanation concise and precise.
+- Be consistent with existing nearby code style unless asked to do otherwise.
+- NEVER leave trailing whitespace on any line.
+- Always format your code: `cargo fmt`.
 
 # Scratch space
 
