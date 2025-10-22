@@ -14,6 +14,7 @@ use crate::executor::aptos_custom_state::AptosCustomState;
 use crate::executor::custom_state_view::CustomStateView;
 use crate::executor::types::TransactionResult;
 use crate::observers::{AbortCodeObserver, ShiftOverflowObserver};
+use crate::state::MAP_SIZE;
 use crate::{AptosFuzzerInput, AptosFuzzerState};
 
 // Type aliases to simplify complex observer tuple types
@@ -22,16 +23,14 @@ type AptosObservers = (
     (AbortCodeObserver, (ShiftOverflowObserver, ())),
 );
 
-const MAP_SIZE: usize = 1 << 16;
-
 pub struct AptosMoveExecutor<EM, Z> {
     aptos_vm: AptosVM,
     _phantom: PhantomData<(EM, Z)>,
-    // Simple execution counters for debugging
     success_count: u64,
     error_count: u64,
     observers: AptosObservers,
     prev_loc: u32,
+    total_instructions_executed: u64,
 }
 
 impl<EM, Z> AptosMoveExecutor<EM, Z> {
@@ -48,12 +47,17 @@ impl<EM, Z> AptosMoveExecutor<EM, Z> {
             error_count: 0,
             observers: (edges, (abort_obs, (shift_obs, ()))),
             prev_loc: 0,
+            total_instructions_executed: 0,
         }
+    }
+    
+    pub fn total_instructions_executed(&self) -> u64 {
+        self.total_instructions_executed
     }
 
     #[inline]
     fn hash32(bytes: &[u8]) -> u32 {
-        // FNV-1a 32-bit
+        // FNV-1a hash
         let mut hash: u32 = 0x811C9DC5;
         for &b in bytes {
             hash ^= b as u32;
@@ -89,7 +93,6 @@ impl<EM, Z> AptosMoveExecutor<EM, Z> {
                 let (result, pcs, shifts, outcome) =
                     self.aptos_vm
                         .execute_user_payload_no_checking(state, &code_storage, &transaction, sender);
-                // Only transform minimal data for caller; no processing here
                 let shift_losses: Vec<bool> = shifts.iter().map(|ev| ev.lost_high_bits).collect();
 
                 let res = match result {
@@ -139,13 +142,10 @@ impl<EM, Z> Executor<EM, AptosFuzzerInput, AptosFuzzerState, Z> for AptosMoveExe
         match result {
             Ok(result) => {
                 self.success_count += 1;
-                // Build AFL-style edge coverage map from pcs
                 let map = self.observers.0.as_slice_mut();
-                for b in map.iter_mut() {
-                    *b = 0;
-                }
                 self.prev_loc = 0;
-                // Build a stable per-function base id to reduce inter-function collisions
+                
+                // Build stable per-function base ID
                 let base_id: u32 = match input.payload() {
                     TransactionPayload::EntryFunction(ef) => {
                         let (module, function, _ty_args, _args) = ef.clone().into_inner();
@@ -158,42 +158,37 @@ impl<EM, Z> Executor<EM, AptosFuzzerInput, AptosFuzzerState, Z> for AptosMoveExe
                     TransactionPayload::Script(script) => Self::hash32(script.code()),
                     _ => 0,
                 };
+                
+                self.total_instructions_executed += pcs.len() as u64;
+                let cumulative_map = state.cumulative_coverage_mut();
+                
+                // Update AFL-style edge coverage
                 for pc in pcs {
                     let cur_id = base_id ^ pc;
                     let idx = ((cur_id ^ self.prev_loc) as usize) & (MAP_SIZE - 1);
-                    let byte = &mut map[idx];
-                    *byte = byte.saturating_add(1);
+                    map[idx] = map[idx].saturating_add(1);
+                    cumulative_map[idx] = cumulative_map[idx].max(1);
                     self.prev_loc = cur_id >> 1;
                 }
-                // Shift overflow observer
+                
+                // Update observers
                 let cause_loss = shift_losses.into_iter().any(|b| b);
                 self.observers.1 .1 .0.set_cause_loss(cause_loss);
                 if let TransactionStatus::Keep(ExecutionStatus::MoveAbort { location: _, code, .. }) = &result.status {
                     self.observers.1 .0.set_last(Some(*code));
-                    if *code == 1337 {
-                        println!("[fuzzer] abort code 1337 captured");
-                    }
                 } else {
                     self.observers.1 .0.set_last(None);
                 }
-                // state.aptos_state_mut().apply_write_set(&result.write_set);
+                
                 *state.executions_mut() += 1;
                 Ok(ExitKind::Ok)
             }
             Err(vm_status) => {
                 self.error_count += 1;
-                // Even on error, reset coverage map to a clean state for next exec
-                let map = self.observers.0.as_slice_mut();
-                for b in map.iter_mut() {
-                    *b = 0;
-                }
                 self.prev_loc = 0;
                 self.observers.1 .1 .0.set_cause_loss(false);
                 if let VMStatus::MoveAbort(ref _loc, code) = vm_status {
                     self.observers.1 .0.set_last(Some(code));
-                    if code == 1337 {
-                        println!("[fuzzer] abort code 1337 captured");
-                    }
                 } else {
                     self.observers.1 .0.set_last(None);
                 }

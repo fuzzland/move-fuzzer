@@ -1,3 +1,5 @@
+mod utils;
+
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
@@ -12,12 +14,14 @@ use libafl::corpus::Corpus;
 use libafl::events::SimpleEventManager;
 use libafl::feedbacks::{EagerOrFeedback, MaxMapFeedback, StateInitializer};
 use libafl::fuzzer::Fuzzer;
-use libafl::monitors::SimpleMonitor;
+use libafl::monitors::NopMonitor;
 use libafl::schedulers::QueueScheduler;
 use libafl::stages::StdMutationalStage;
-use libafl::state::HasCorpus;
+use libafl::state::{HasCorpus, HasExecutions, HasSolutions};
 use libafl::{Evaluator, StdFuzzer};
 use libafl_bolts::tuples::tuple_list;
+
+use utils::print_fuzzer_stats;
 
 #[derive(Debug, Parser)]
 #[command(author, version, about = "LibAFL-based fuzzer for Aptos Move modules")]
@@ -45,13 +49,13 @@ fn main() {
         println!("Timeout: None (will run indefinitely, use Ctrl+C to stop)");
     }
 
-    // Build coverage feedback on top of executor's pc observer
+    // Setup executor and feedback
     let mut executor = AptosMoveExecutor::new();
     let cov_feedback = MaxMapFeedback::new(executor.pc_observer());
     let mut feedback = EagerOrFeedback::new(cov_feedback, AbortCodeFeedback::new());
     let objective = EagerOrFeedback::new(ShiftOverflowObjective::new(), AbortCodeObjective::new());
 
-    let mon = SimpleMonitor::new(|s| println!("{s}"));
+    let mon = NopMonitor::new();
     let mut mgr = SimpleEventManager::new(mon);
     let scheduler = QueueScheduler::new();
 
@@ -75,7 +79,7 @@ fn main() {
         state.corpus().count()
     );
 
-    // Prefer adding initial seeds via fuzzer.add_input to fire events and reflect in monitor
+    // Add initial seeds to corpus
     let initial_inputs = state.take_initial_inputs();
     for input in initial_inputs {
         let _ = fuzzer
@@ -83,18 +87,17 @@ fn main() {
             .expect("failed to add initial input");
     }
 
-    // Set up graceful shutdown handling
+    // Setup graceful shutdown
     let running = Arc::new(AtomicBool::new(true));
     let r = running.clone();
 
-    // Handle Ctrl+C for graceful shutdown
     ctrlc::set_handler(move || {
         r.store(false, Ordering::SeqCst);
         println!("\n[*] Received interrupt signal, shutting down gracefully...");
     })
     .expect("Error setting Ctrl-C handler");
 
-    // Set up timeout thread if timeout is specified
+    // Setup timeout thread
     if cli.timeout_seconds > 0 {
         let r = running.clone();
         let timeout_secs = cli.timeout_seconds;
@@ -104,14 +107,30 @@ fn main() {
         });
     }
 
-    // Fuzzing loop with timeout and graceful shutdown support
+    // Main fuzzing loop
     let start_time = Instant::now();
-    let mut iteration_count = 0u64;
+    let mut last_print_time = Instant::now();
+    let print_interval = Duration::from_millis(500);
 
     while running.load(Ordering::SeqCst) {
         match fuzzer.fuzz_one(&mut stages, &mut executor, &mut state, &mut mgr) {
             Ok(_) => {
-                iteration_count += 1;
+                if last_print_time.elapsed() >= print_interval {
+                    // Read cumulative coverage from state
+                    let coverage_map = state.cumulative_coverage();
+                    let total_instructions_executed = executor.total_instructions_executed();
+                    let total_possible_edges = state.aptos_state().total_possible_edges();
+                    print_fuzzer_stats(
+                        start_time,
+                        *state.executions(),
+                        state.corpus().count(),
+                        state.solutions().count(),
+                        coverage_map,
+                        total_instructions_executed,
+                        total_possible_edges,
+                    );
+                    last_print_time = Instant::now();
+                }
             }
             Err(e) => {
                 eprintln!("Error during fuzzing: {:?}", e);
@@ -120,16 +139,19 @@ fn main() {
         }
     }
 
-    // Graceful shutdown - print final statistics
-    let total_time = start_time.elapsed();
+    // Print final statistics
     println!("\n[+] Fuzzing completed");
-    println!("    Total runtime:    {:.2}s", total_time.as_secs_f64());
-    println!("    Total iterations: {}", iteration_count);
-    if total_time.as_secs() > 0 {
-        println!(
-            "    Iterations/sec:   {:.0}",
-            iteration_count as f64 / total_time.as_secs_f64()
-        );
-    }
-    println!("    Corpus size:      {}", state.corpus().count());
+    println!("\nFinal Statistics:");
+    let coverage_map = state.cumulative_coverage();
+    let total_instructions_executed = executor.total_instructions_executed();
+    let total_possible_edges = state.aptos_state().total_possible_edges();
+    print_fuzzer_stats(
+        start_time,
+        *state.executions(),
+        state.corpus().count(),
+        state.solutions().count(),
+        coverage_map,
+        total_instructions_executed,
+        total_possible_edges,
+    );
 }

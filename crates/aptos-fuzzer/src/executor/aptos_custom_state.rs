@@ -6,6 +6,8 @@ use aptos_aggregator::resolver::{TAggregatorV1View, TDelayedFieldView};
 use aptos_aggregator::types::{DelayedFieldValue, DelayedFieldsSpeculativeError};
 use aptos_cached_packages::head_release_bundle;
 use aptos_gas_schedule::{MiscGasParameters, NativeGasParameters};
+use aptos_move_binary_format::access::ModuleAccess;
+use aptos_move_binary_format::control_flow_graph::{ControlFlowGraph, VMControlFlowGraph};
 use aptos_move_binary_format::errors::{PartialVMError, PartialVMResult, VMResult};
 use aptos_move_binary_format::file_format::CompiledScript;
 use aptos_move_binary_format::CompiledModule;
@@ -626,5 +628,38 @@ impl AptosCustomState {
         let state_key = StateKey::module(module_id.address(), module_id.name());
         self.modules.insert(module_id.clone(), bytes.clone());
         self.kv_state.insert(state_key, StateValue::new_legacy(bytes));
+    }
+    
+    // Calculate total bytecode instructions across all modules
+    pub fn total_bytecode_instructions(&self) -> usize {
+        let mut total = 0;
+        for bytes in self.modules.values() {
+            if let Ok(module) = CompiledModule::deserialize(bytes) {
+                for func_def in module.function_defs() {
+                    if let Some(code_unit) = &func_def.code {
+                        total += code_unit.code.len();
+                    }
+                }
+            }
+        }
+        total
+    }
+    
+    // Calculate total possible edges (control flow transitions) across all modules
+    pub fn total_possible_edges(&self) -> usize {
+        let mut total = 0;
+        for bytes in self.modules.values() {
+            if let Ok(module) = CompiledModule::deserialize(bytes) {
+                for func_def in module.function_defs() {
+                    if let Some(code_unit) = &func_def.code {
+                        let cfg = VMControlFlowGraph::new(&code_unit.code);
+                        for block_id in cfg.blocks() {
+                            total += cfg.successors(block_id).len();
+                        }
+                    }
+                }
+            }
+        }
+        total
     }
 }

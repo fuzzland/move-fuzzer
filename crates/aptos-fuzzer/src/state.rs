@@ -22,38 +22,26 @@ use libafl_bolts::serdeany::{NamedSerdeAnyMap, SerdeAnyMap};
 use crate::executor::aptos_custom_state::AptosCustomState;
 use crate::input::AptosFuzzerInput;
 
-// Similar to libafl::state::StdState
+// AFL-style map size constant
+pub const MAP_SIZE: usize = 1 << 16;
+
 pub struct AptosFuzzerState {
-    // RNG instance
     rand: StdRand,
-    /// How many times the executor ran the harness/target
     executions: u64,
-    /// At what time the fuzzing started
     start_time: Duration,
-    /// the number of new paths that imported from other fuzzers
     imported: usize,
-    /// The corpus
     corpus: InMemoryCorpus<AptosFuzzerInput>,
-    /// Solution corpus
     solutions: InMemoryCorpus<AptosFuzzerInput>,
-    /// Metadata stored for this state by one of the components
     metadata: SerdeAnyMap,
-    /// Metadata stored with names
     named_metadata: NamedSerdeAnyMap,
-    /// The last time something was added to the corpus
     last_found_time: Duration,
-    /// The last time we reported progress (if available/used).
-    /// This information is used by fuzzer `maybe_report_progress`.
     last_report_time: Option<Duration>,
-    /// The current index of the corpus; used to record for resumable fuzzing.
     corpus_id: Option<CorpusId>,
-    /// Request the fuzzer to stop at the start of the next stage
-    /// or at the beginning of the next fuzzing iteration
     stop_requested: bool,
     stage_stack: StageStack,
-
-    /// Aptos specific fields
     aptos_state: AptosCustomState,
+    // Persistent coverage for statistics (not reset by LibAFL)
+    cumulative_coverage: Vec<u8>,
 }
 
 impl AptosFuzzerState {
@@ -76,6 +64,7 @@ impl AptosFuzzerState {
             corpus_id: None,
             stop_requested: false,
             stage_stack: StageStack::default(),
+            cumulative_coverage: vec![0u8; MAP_SIZE],
         };
 
         if let Some((module_id, code)) = module_bytes {
@@ -90,9 +79,7 @@ impl AptosFuzzerState {
         state
     }
 
-    /// Drain current corpus entries into a vector of inputs and clear the
-    /// corpus. Useful to re-insert seeds via fuzzer.add_input so
-    /// events/feedback are fired.
+    // Drain corpus entries for re-insertion via fuzzer.add_input
     pub fn take_initial_inputs(&mut self) -> Vec<AptosFuzzerInput> {
         let ids: Vec<_> = self.corpus().ids().collect();
         let mut inputs = Vec::with_capacity(ids.len());
@@ -101,7 +88,6 @@ impl AptosFuzzerState {
                 inputs.push(input);
             }
         }
-        // Clear existing entries
         while let Some(id) = self.corpus().ids().next() {
             let _ = self.corpus_mut().remove(id);
         }
@@ -114,6 +100,14 @@ impl AptosFuzzerState {
 
     pub fn aptos_state_mut(&mut self) -> &mut AptosCustomState {
         &mut self.aptos_state
+    }
+    
+    pub fn cumulative_coverage(&self) -> &[u8] {
+        &self.cumulative_coverage
+    }
+    
+    pub fn cumulative_coverage_mut(&mut self) -> &mut [u8] {
+        &mut self.cumulative_coverage
     }
 }
 
