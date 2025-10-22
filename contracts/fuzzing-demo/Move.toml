@@ -1,0 +1,12 @@
+[package]
+name = "fuzzing-demo"
+version = "0.0.1"
+
+[addresses]
+fuzzing_demo = "0x42"
+std = "0x1"
+aptos_framework = "0x1"
+
+[dependencies]
+AptosFramework = { local = "../../external/aptos-core/aptos-move/framework/aptos-framework" }
+

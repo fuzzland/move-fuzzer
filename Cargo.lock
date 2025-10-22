@@ -5643,6 +5643,7 @@ version = "0.1.0"
 dependencies = [
  "aptos-fuzzer",
  "clap 4.5.47",
+ "ctrlc",
  "libafl",
  "libafl_bolts",
 ]

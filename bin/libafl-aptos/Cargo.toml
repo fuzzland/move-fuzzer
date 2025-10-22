@@ -8,3 +8,4 @@ libafl = { workspace = true }
 libafl_bolts = { workspace = true }
 aptos-fuzzer = { workspace = true }
 clap = { workspace = true }
+ctrlc = "3.4"
