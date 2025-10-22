@@ -57,7 +57,8 @@ pub struct AptosFuzzerState {
 
     /// Aptos specific fields
     aptos_state: AptosCustomState,
-    /// Cumulative coverage map for statistics (Observer map resets each execution)
+    /// Cumulative coverage map for statistics (Observer map resets each
+    /// execution)
     cumulative_coverage: Vec<u8>,
 }
 
@@ -96,7 +97,9 @@ impl AptosFuzzerState {
         state
     }
 
-    // Drain corpus entries for re-insertion via fuzzer.add_input
+    /// Drain current corpus entries into a vector of inputs and clear the
+    /// corpus. Useful to re-insert seeds via fuzzer.add_input so
+    /// events/feedback are fired.
     pub fn take_initial_inputs(&mut self) -> Vec<AptosFuzzerInput> {
         let ids: Vec<_> = self.corpus().ids().collect();
         let mut inputs = Vec::with_capacity(ids.len());
@@ -105,6 +108,7 @@ impl AptosFuzzerState {
                 inputs.push(input);
             }
         }
+        // Clear existing entries
         while let Some(id) = self.corpus().ids().next() {
             let _ = self.corpus_mut().remove(id);
         }
@@ -118,11 +122,11 @@ impl AptosFuzzerState {
     pub fn aptos_state_mut(&mut self) -> &mut AptosCustomState {
         &mut self.aptos_state
     }
-    
+
     pub fn cumulative_coverage(&self) -> &[u8] {
         &self.cumulative_coverage
     }
-    
+
     pub fn cumulative_coverage_mut(&mut self) -> &mut [u8] {
         &mut self.cumulative_coverage
     }

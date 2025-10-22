@@ -50,7 +50,7 @@ impl<EM, Z> AptosMoveExecutor<EM, Z> {
             total_instructions_executed: 0,
         }
     }
-    
+
     pub fn total_instructions_executed(&self) -> u64 {
         self.total_instructions_executed
     }
@@ -139,16 +139,16 @@ impl<EM, Z> Executor<EM, AptosFuzzerInput, AptosFuzzerState, Z> for AptosMoveExe
     ) -> Result<ExitKind, libafl::Error> {
         let (result, outcome, pcs, shift_losses) =
             self.execute_transaction(input.payload().clone(), state.aptos_state(), None);
-        
+
         // Update execution counter (required by Executor trait contract)
         *state.executions_mut() += 1;
-        
+
         match result {
             Ok(result) => {
                 self.success_count += 1;
                 let map = self.observers.0.as_slice_mut();
                 self.prev_loc = 0;
-                
+
                 // Build stable per-function base ID
                 let base_id: u32 = match input.payload() {
                     TransactionPayload::EntryFunction(ef) => {
@@ -162,10 +162,10 @@ impl<EM, Z> Executor<EM, AptosFuzzerInput, AptosFuzzerState, Z> for AptosMoveExe
                     TransactionPayload::Script(script) => Self::hash32(script.code()),
                     _ => 0,
                 };
-                
+
                 self.total_instructions_executed += pcs.len() as u64;
                 let cumulative_map = state.cumulative_coverage_mut();
-                
+
                 // Update AFL-style edge coverage in observer and cumulative maps
                 for pc in pcs {
                     let cur_id = base_id ^ pc;
@@ -174,7 +174,7 @@ impl<EM, Z> Executor<EM, AptosFuzzerInput, AptosFuzzerState, Z> for AptosMoveExe
                     cumulative_map[idx] = cumulative_map[idx].max(1);
                     self.prev_loc = cur_id >> 1;
                 }
-                
+
                 // Update observers
                 let cause_loss = shift_losses.into_iter().any(|b| b);
                 self.observers.1 .1 .0.set_cause_loss(cause_loss);
@@ -183,7 +183,7 @@ impl<EM, Z> Executor<EM, AptosFuzzerInput, AptosFuzzerState, Z> for AptosMoveExe
                 } else {
                     self.observers.1 .0.set_last(None);
                 }
-                
+
                 Ok(ExitKind::Ok)
             }
             Err(vm_status) => {

@@ -20,7 +20,6 @@ use libafl::stages::StdMutationalStage;
 use libafl::state::{HasCorpus, HasExecutions, HasSolutions};
 use libafl::{Evaluator, StdFuzzer};
 use libafl_bolts::tuples::tuple_list;
-
 use utils::print_fuzzer_stats;
 
 #[derive(Debug, Parser)]
@@ -42,7 +41,7 @@ struct Cli {
 fn main() {
     let cli = Cli::parse();
     println!("Starting Aptos Move Fuzzer...");
-    
+
     if cli.timeout_seconds > 0 {
         println!("Timeout: {} seconds", cli.timeout_seconds);
     } else {

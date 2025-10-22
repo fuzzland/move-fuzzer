@@ -629,7 +629,7 @@ impl AptosCustomState {
         self.modules.insert(module_id.clone(), bytes.clone());
         self.kv_state.insert(state_key, StateValue::new_legacy(bytes));
     }
-    
+
     // Calculate total bytecode instructions across all modules
     pub fn total_bytecode_instructions(&self) -> usize {
         let mut total = 0;
@@ -644,7 +644,7 @@ impl AptosCustomState {
         }
         total
     }
-    
+
     // Calculate total possible edges (control flow transitions) across all modules
     pub fn total_possible_edges(&self) -> usize {
         let mut total = 0;
