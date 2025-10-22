@@ -15,3 +15,8 @@ The fuzzer itself is at very early stage. Feel free to grab an issue and start w
 Make sure you ran `cargo clippy -- -D warnings` before submitting a PR.
 
 AI generated code is allowed but please review it first. e.g. delete chatty comments. Make sure to manage your agent well and shitty code won't be reviewed.
+
+# Run Demonstration
+
+```
+./scripts/setup_aptos.sh -c fuzzing-demo -t 30
