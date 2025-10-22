@@ -20,7 +20,6 @@ use libafl::stages::StdMutationalStage;
 use libafl::state::{HasCorpus, HasExecutions, HasSolutions};
 use libafl::{Evaluator, StdFuzzer};
 use libafl_bolts::tuples::tuple_list;
-
 use utils::print_fuzzer_stats;
 
 #[derive(Debug, Parser)]
@@ -42,7 +41,7 @@ struct Cli {
 fn main() {
     let cli = Cli::parse();
     println!("Starting Aptos Move Fuzzer...");
-    
+
     if cli.timeout_seconds > 0 {
         println!("Timeout: {} seconds", cli.timeout_seconds);
     } else {
@@ -79,7 +78,7 @@ fn main() {
         state.corpus().count()
     );
 
-    // Add initial seeds to corpus
+    // Prefer adding initial seeds via fuzzer.add_input so events fire properly
     let initial_inputs = state.take_initial_inputs();
     for input in initial_inputs {
         let _ = fuzzer
@@ -154,4 +153,22 @@ fn main() {
         total_instructions_executed,
         total_possible_edges,
     );
+    let solutions = state.take_solutions();
+    if !solutions.is_empty() {
+        println!("Discovered solutions:");
+        for input in solutions {
+            println!("  {:?}", input);
+            if let Some(execution_path) = state.get_solution_execution_path(&input) {
+                println!("    Execution path: {:?}", execution_path);
+                if let Some(path_id) = state.get_solution_execution_path_id(&input) {
+                    if state.abort_code_paths.contains(&path_id) {
+                        println!("    Found InvariantViolation!");
+                    }
+                    if state.shift_overflow_paths.contains(&path_id) {
+                        println!("    Found ShiftOverflow!");
+                    }
+                }
+            }
+        }
+    }
 }

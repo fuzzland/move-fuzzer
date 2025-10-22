@@ -1,4 +1,5 @@
 use std::cell::{Ref, RefMut};
+use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::time::Duration;
@@ -39,6 +40,13 @@ pub struct AptosFuzzerState {
     corpus: InMemoryCorpus<AptosFuzzerInput>,
     /// Solution corpus
     solutions: InMemoryCorpus<AptosFuzzerInput>,
+    /// Execution path captured during the most recent run
+    current_execution_path: Option<Vec<u32>>,
+    current_execution_path_id: Option<u64>,
+    /// Execution paths recorded for interesting inputs
+    execution_paths_by_input: HashMap<AptosFuzzerInput, ExecutionPathRecord>,
+    /// Execution path IDs observed so far to deduplicate interesting inputs
+    seen_execution_paths: HashSet<u64>,
     /// Metadata stored for this state by one of the components
     metadata: SerdeAnyMap,
     /// Metadata stored with names
@@ -57,8 +65,19 @@ pub struct AptosFuzzerState {
 
     /// Aptos specific fields
     aptos_state: AptosCustomState,
-    /// Cumulative coverage map for statistics (Observer map resets each execution)
+    /// Cumulative coverage map for statistics (Observer map resets each
+    /// execution)
     cumulative_coverage: Vec<u8>,
+    /// Execution path IDs that triggered abort-code objectives
+    pub abort_code_paths: HashSet<u64>,
+    /// Execution path IDs that triggered shift overflow objectives
+    pub shift_overflow_paths: HashSet<u64>,
+}
+
+#[derive(Clone)]
+struct ExecutionPathRecord {
+    id: u64,
+    path: Vec<u32>,
 }
 
 impl AptosFuzzerState {
@@ -74,6 +93,12 @@ impl AptosFuzzerState {
             imported: 0,
             corpus: InMemoryCorpus::new(),
             solutions: InMemoryCorpus::new(),
+            current_execution_path: None,
+            current_execution_path_id: None,
+            execution_paths_by_input: HashMap::new(),
+            seen_execution_paths: HashSet::new(),
+            abort_code_paths: HashSet::new(),
+            shift_overflow_paths: HashSet::new(),
             metadata: SerdeAnyMap::new(),
             named_metadata: NamedSerdeAnyMap::new(),
             last_found_time: Duration::from_secs(0),
@@ -118,13 +143,83 @@ impl AptosFuzzerState {
     pub fn aptos_state_mut(&mut self) -> &mut AptosCustomState {
         &mut self.aptos_state
     }
-    
+
     pub fn cumulative_coverage(&self) -> &[u8] {
         &self.cumulative_coverage
     }
-    
+
     pub fn cumulative_coverage_mut(&mut self) -> &mut [u8] {
         &mut self.cumulative_coverage
+    }
+
+    pub fn take_solutions(&self) -> Vec<AptosFuzzerInput> {
+        let solutions = self.solutions();
+        let mut seen_ids = HashSet::new();
+        let mut inputs = Vec::new();
+        for id in solutions.ids() {
+            if let Ok(input) = solutions.cloned_input_for_id(id) {
+                if let Some(record) = self.execution_paths_by_input.get(&input) {
+                    if seen_ids.insert(record.id) {
+                        inputs.push(input);
+                    }
+                }
+            }
+        }
+        inputs
+    }
+
+    pub fn clear_current_execution_path(&mut self) {
+        self.current_execution_path = None;
+        self.current_execution_path_id = None;
+    }
+
+    pub fn set_current_execution_path(&mut self, execution_path: Vec<u32>) {
+        let id = Self::compute_execution_path_id(&execution_path);
+        self.current_execution_path = Some(execution_path);
+        self.current_execution_path_id = Some(id);
+    }
+
+    pub fn current_execution_path_id(&self) -> Option<u64> {
+        self.current_execution_path_id
+    }
+
+    pub fn record_current_execution_path_for(&mut self, input: &AptosFuzzerInput) -> Option<u64> {
+        match (self.current_execution_path_id, self.current_execution_path.as_ref()) {
+            (Some(id), Some(path)) => {
+                self.execution_paths_by_input
+                    .entry(input.clone())
+                    .or_insert_with(|| ExecutionPathRecord { id, path: path.clone() });
+                Some(id)
+            }
+            _ => None,
+        }
+    }
+
+    pub fn mark_execution_path_seen(&mut self, path_id: u64) -> bool {
+        self.seen_execution_paths.insert(path_id)
+    }
+
+    pub fn has_seen_execution_path(&self, path_id: u64) -> bool {
+        self.seen_execution_paths.contains(&path_id)
+    }
+
+    pub fn get_solution_execution_path(&self, input: &AptosFuzzerInput) -> Option<Vec<u32>> {
+        self.execution_paths_by_input
+            .get(input)
+            .map(|record| record.path.clone())
+    }
+
+    pub fn get_solution_execution_path_id(&self, input: &AptosFuzzerInput) -> Option<u64> {
+        self.execution_paths_by_input.get(input).map(|record| record.id)
+    }
+
+    pub fn compute_execution_path_id(execution_path: &[u32]) -> u64 {
+        const FNV_OFFSET: u64 = 0xcbf29ce484222325;
+        const FNV_PRIME: u64 = 0x100000001b3;
+        execution_path.iter().fold(FNV_OFFSET, |hash, value| {
+            let hash = hash ^ (*value as u64);
+            hash.wrapping_mul(FNV_PRIME)
+        })
     }
 }
 

@@ -51,14 +51,20 @@ where
     #[allow(clippy::wrong_self_convention)]
     fn is_interesting(
         &mut self,
-        _state: &mut AptosFuzzerState,
+        state: &mut AptosFuzzerState,
         _manager: &mut EM,
-        _input: &AptosFuzzerInput,
+        input: &AptosFuzzerInput,
         observers: &OT,
         exit_kind: &libafl::executors::ExitKind,
     ) -> Result<bool, Error> {
         // Always keep crashers
         if matches!(exit_kind, libafl::executors::ExitKind::Crash) {
+            if let Some(path_id) = state.current_execution_path_id() {
+                if !state.mark_execution_path_seen(path_id) {
+                    return Ok(false);
+                }
+                state.record_current_execution_path_for(input);
+            }
             return Ok(true);
         }
         // Check if the last execution produced an abort code
@@ -71,7 +77,16 @@ where
         if let Some(abort_code) = code_opt {
             // If this is a new abort code we haven't seen before, it's interesting
             if !self.seen_abort_codes.contains(&abort_code) {
-                self.seen_abort_codes.insert(abort_code);
+                if let Some(path_id) = state.current_execution_path_id() {
+                    if !state.mark_execution_path_seen(path_id) {
+                        return Ok(false);
+                    }
+                    self.seen_abort_codes.insert(abort_code);
+                    state.abort_code_paths.insert(path_id);
+                    state.record_current_execution_path_for(input);
+                } else {
+                    self.seen_abort_codes.insert(abort_code);
+                }
                 return Ok(true);
             }
         }
@@ -135,14 +150,20 @@ where
     #[allow(clippy::wrong_self_convention)]
     fn is_interesting(
         &mut self,
-        _state: &mut AptosFuzzerState,
+        state: &mut AptosFuzzerState,
         _manager: &mut EM,
-        _input: &AptosFuzzerInput,
+        input: &AptosFuzzerInput,
         observers: &OT,
         exit_kind: &libafl::executors::ExitKind,
     ) -> Result<bool, Error> {
         // Treat VM invariant violations / panics as objectives
         if matches!(exit_kind, libafl::executors::ExitKind::Crash) {
+            if let Some(path_id) = state.current_execution_path_id() {
+                if !state.mark_execution_path_seen(path_id) {
+                    return Ok(false);
+                }
+                state.record_current_execution_path_for(input);
+            }
             return Ok(true);
         }
         // Check if the last execution produced an abort code
@@ -156,10 +177,24 @@ where
             // If we have specific target codes, only those are objectives
             if !self.target_abort_codes.is_empty() {
                 if self.target_abort_codes.contains(&abort_code) {
+                    if let Some(path_id) = state.current_execution_path_id() {
+                        if !state.mark_execution_path_seen(path_id) {
+                            return Ok(false);
+                        }
+                        state.abort_code_paths.insert(path_id);
+                        state.record_current_execution_path_for(input);
+                    }
                     return Ok(true);
                 }
             } else {
                 // If no specific targets, any abort code is an objective
+                if let Some(path_id) = state.current_execution_path_id() {
+                    if !state.mark_execution_path_seen(path_id) {
+                        return Ok(false);
+                    }
+                    state.abort_code_paths.insert(path_id);
+                    state.record_current_execution_path_for(input);
+                }
                 return Ok(true);
             }
         }
@@ -207,9 +242,9 @@ where
 {
     fn is_interesting(
         &mut self,
-        _state: &mut AptosFuzzerState,
+        state: &mut AptosFuzzerState,
         _manager: &mut EM,
-        _input: &AptosFuzzerInput,
+        input: &AptosFuzzerInput,
         observers: &OT,
         _exit_kind: &libafl::executors::ExitKind,
     ) -> Result<bool, Error> {
@@ -219,7 +254,17 @@ where
         if let Some(obs_ref) = observers.get(&shift_handle) {
             cause_loss = obs_ref.cause_loss();
         }
-        Ok(cause_loss)
+        if cause_loss {
+            if let Some(path_id) = state.current_execution_path_id() {
+                if !state.mark_execution_path_seen(path_id) {
+                    return Ok(false);
+                }
+                state.shift_overflow_paths.insert(path_id);
+                state.record_current_execution_path_for(input);
+            }
+            return Ok(true);
+        }
+        Ok(false)
     }
 }
 
@@ -251,9 +296,9 @@ where
 {
     fn is_interesting(
         &mut self,
-        _state: &mut AptosFuzzerState,
+        state: &mut AptosFuzzerState,
         _manager: &mut EM,
-        _input: &AptosFuzzerInput,
+        input: &AptosFuzzerInput,
         observers: &OT,
         _exit_kind: &libafl::executors::ExitKind,
     ) -> Result<bool, Error> {
@@ -263,6 +308,17 @@ where
         if let Some(obs_ref) = observers.get(&shift_handle) {
             cause_loss = obs_ref.cause_loss();
         }
-        Ok(cause_loss)
+
+        if cause_loss {
+            if let Some(path_id) = state.current_execution_path_id() {
+                if !state.mark_execution_path_seen(path_id) {
+                    return Ok(false);
+                }
+                state.shift_overflow_paths.insert(path_id);
+                state.record_current_execution_path_for(input);
+            }
+            return Ok(true);
+        }
+        Ok(false)
     }
 }

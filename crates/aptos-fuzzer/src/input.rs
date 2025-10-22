@@ -2,7 +2,7 @@ use aptos_types::transaction::TransactionPayload;
 use libafl::inputs::Input;
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, Hash, Deserialize, Serialize)]
+#[derive(Debug, Clone, Hash, Eq, PartialEq, Deserialize, Serialize)]
 pub struct AptosFuzzerInput {
     payload: TransactionPayload,
 }

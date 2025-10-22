@@ -50,7 +50,7 @@ impl<EM, Z> AptosMoveExecutor<EM, Z> {
             total_instructions_executed: 0,
         }
     }
-    
+
     pub fn total_instructions_executed(&self) -> u64 {
         self.total_instructions_executed
     }
@@ -137,18 +137,22 @@ impl<EM, Z> Executor<EM, AptosFuzzerInput, AptosFuzzerState, Z> for AptosMoveExe
         _mgr: &mut EM,
         input: &AptosFuzzerInput,
     ) -> Result<ExitKind, libafl::Error> {
+        state.clear_current_execution_path();
         let (result, outcome, pcs, shift_losses) =
             self.execute_transaction(input.payload().clone(), state.aptos_state(), None);
-        
+
         // Update execution counter (required by Executor trait contract)
         *state.executions_mut() += 1;
-        
+
         match result {
             Ok(result) => {
                 self.success_count += 1;
                 let map = self.observers.0.as_slice_mut();
+                for byte in map.iter_mut() {
+                    *byte = 0;
+                }
                 self.prev_loc = 0;
-                
+
                 // Build stable per-function base ID
                 let base_id: u32 = match input.payload() {
                     TransactionPayload::EntryFunction(ef) => {
@@ -162,19 +166,23 @@ impl<EM, Z> Executor<EM, AptosFuzzerInput, AptosFuzzerState, Z> for AptosMoveExe
                     TransactionPayload::Script(script) => Self::hash32(script.code()),
                     _ => 0,
                 };
-                
+
                 self.total_instructions_executed += pcs.len() as u64;
-                let cumulative_map = state.cumulative_coverage_mut();
-                
-                // Update AFL-style edge coverage in observer and cumulative maps
-                for pc in pcs {
-                    let cur_id = base_id ^ pc;
-                    let idx = ((cur_id ^ self.prev_loc) as usize) & (MAP_SIZE - 1);
-                    map[idx] = map[idx].saturating_add(1);
-                    cumulative_map[idx] = cumulative_map[idx].max(1);
-                    self.prev_loc = cur_id >> 1;
+
+                {
+                    let cumulative_map = state.cumulative_coverage_mut();
+                    // Update AFL-style edge coverage in observer and cumulative maps
+                    for &pc in &pcs {
+                        let cur_id = base_id ^ pc;
+                        let idx = ((cur_id ^ self.prev_loc) as usize) & (MAP_SIZE - 1);
+                        map[idx] = map[idx].saturating_add(1);
+                        cumulative_map[idx] = cumulative_map[idx].max(1);
+                        self.prev_loc = cur_id >> 1;
+                    }
                 }
-                
+
+                state.set_current_execution_path(pcs);
+
                 // Update observers
                 let cause_loss = shift_losses.into_iter().any(|b| b);
                 self.observers.1 .1 .0.set_cause_loss(cause_loss);
@@ -183,13 +191,18 @@ impl<EM, Z> Executor<EM, AptosFuzzerInput, AptosFuzzerState, Z> for AptosMoveExe
                 } else {
                     self.observers.1 .0.set_last(None);
                 }
-                
+
                 Ok(ExitKind::Ok)
             }
             Err(vm_status) => {
                 self.error_count += 1;
+                let map = self.observers.0.as_slice_mut();
+                for byte in map.iter_mut() {
+                    *byte = 0;
+                }
                 self.prev_loc = 0;
                 self.observers.1 .1 .0.set_cause_loss(false);
+                state.set_current_execution_path(pcs);
                 if let VMStatus::MoveAbort(ref _loc, code) = vm_status {
                     self.observers.1 .0.set_last(Some(code));
                 } else {
