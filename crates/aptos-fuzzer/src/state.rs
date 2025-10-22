@@ -25,22 +25,39 @@ use crate::input::AptosFuzzerInput;
 // AFL-style map size constant
 pub const MAP_SIZE: usize = 1 << 16;
 
+// Similar to libafl::state::StdState
 pub struct AptosFuzzerState {
+    // RNG instance
     rand: StdRand,
+    /// How many times the executor ran the harness/target
     executions: u64,
+    /// At what time the fuzzing started
     start_time: Duration,
+    /// the number of new paths that imported from other fuzzers
     imported: usize,
+    /// The corpus
     corpus: InMemoryCorpus<AptosFuzzerInput>,
+    /// Solution corpus
     solutions: InMemoryCorpus<AptosFuzzerInput>,
+    /// Metadata stored for this state by one of the components
     metadata: SerdeAnyMap,
+    /// Metadata stored with names
     named_metadata: NamedSerdeAnyMap,
+    /// The last time something was added to the corpus
     last_found_time: Duration,
+    /// The last time we reported progress (if available/used).
+    /// This information is used by fuzzer `maybe_report_progress`.
     last_report_time: Option<Duration>,
+    /// The current index of the corpus; used to record for resumable fuzzing.
     corpus_id: Option<CorpusId>,
+    /// Request the fuzzer to stop at the start of the next stage
+    /// or at the beginning of the next fuzzing iteration
     stop_requested: bool,
     stage_stack: StageStack,
+
+    /// Aptos specific fields
     aptos_state: AptosCustomState,
-    // Persistent coverage for statistics (not reset by LibAFL)
+    /// Cumulative coverage map for statistics (Observer map resets each execution)
     cumulative_coverage: Vec<u8>,
 }
 

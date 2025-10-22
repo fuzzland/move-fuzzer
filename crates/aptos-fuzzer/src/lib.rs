@@ -10,4 +10,3 @@ pub use feedback::{AbortCodeFeedback, AbortCodeObjective, ShiftOverflowObjective
 pub use input::AptosFuzzerInput;
 pub use mutator::AptosFuzzerMutator;
 pub use state::{AptosFuzzerState, MAP_SIZE};
-

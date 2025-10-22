@@ -57,48 +57,37 @@ pub fn print_fuzzer_stats(
         );
     }
     
-    println!(
-        "Total instructions executed: {} (avg {:.1} per execution)",
-        total_instructions_executed,
-        if executions > 0 { total_instructions_executed as f64 / executions as f64 } else { 0.0 }
-    );
+    // Print compact coverage summary
+    let avg_instrs = if executions > 0 { 
+        total_instructions_executed as f64 / executions as f64 
+    } else { 
+        0.0 
+    };
     
-    print_coverage_segments(coverage_map);
+    let covered_segments = count_covered_segments(coverage_map, 4096);
+    let total_segments = (coverage_map.len() + 4095) / 4096;
+    
+    println!(
+        "instrs: {} (avg {:.1}/exec), segments: {}/{}",
+        total_instructions_executed,
+        avg_instrs,
+        covered_segments,
+        total_segments
+    );
 }
 
-// Print coverage breakdown by segments
-fn print_coverage_segments(coverage_map: &[u8]) {
-    const SEGMENT_SIZE: usize = 4096;
-    let total_edges = coverage_map.len();
-    let num_segments = total_edges.div_ceil(SEGMENT_SIZE);
+// Count segments that have any coverage
+fn count_covered_segments(coverage_map: &[u8], segment_size: usize) -> usize {
+    let num_segments = (coverage_map.len() + segment_size - 1) / segment_size;
+    let mut covered = 0;
     
-    print!("Coverage by segment: ");
     for seg_idx in 0..num_segments {
-        let start = seg_idx * SEGMENT_SIZE;
-        let end = ((seg_idx + 1) * SEGMENT_SIZE).min(total_edges);
-        let segment = &coverage_map[start..end];
-        
-        let seg_covered = segment.iter().filter(|&&b| b > 0).count();
-        let seg_total = segment.len();
-        let seg_pct = (seg_covered as f64 / seg_total as f64) * 100.0;
-        
-        let display = format_segment_coverage(seg_idx, seg_pct);
-        print!("{} ", display);
-        
-        if (seg_idx + 1) % 8 == 0 && seg_idx + 1 < num_segments {
-            print!("\n                     ");
+        let start = seg_idx * segment_size;
+        let end = ((seg_idx + 1) * segment_size).min(coverage_map.len());
+        if coverage_map[start..end].iter().any(|&b| b > 0) {
+            covered += 1;
         }
     }
-    println!();
-}
-
-// Format segment coverage display
-fn format_segment_coverage(seg_idx: usize, seg_pct: f64) -> String {
-    if seg_pct >= 99.9 {
-        format!("[{:2}:✓]", seg_idx)
-    } else if seg_pct > 0.0 {
-        format!("[{:2}:{:2.0}%]", seg_idx, seg_pct)
-    } else {
-        format!("[{:2}:--]", seg_idx)
-    }
+    
+    covered
 }

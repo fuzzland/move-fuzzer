@@ -33,7 +33,12 @@ impl Named for AbortCodeObserver {
     }
 }
 
-impl<I, S> Observer<I, S> for AbortCodeObserver {}
+impl<I, S> Observer<I, S> for AbortCodeObserver {
+    fn pre_exec(&mut self, _state: &mut S, _input: &I) -> Result<(), libafl::Error> {
+        self.last = None;
+        Ok(())
+    }
+}
 
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct ShiftOverflowObserver {
@@ -64,4 +69,9 @@ impl Named for ShiftOverflowObserver {
     }
 }
 
-impl<I, S> Observer<I, S> for ShiftOverflowObserver {}
+impl<I, S> Observer<I, S> for ShiftOverflowObserver {
+    fn pre_exec(&mut self, _state: &mut S, _input: &I) -> Result<(), libafl::Error> {
+        self.cause_loss = false;
+        Ok(())
+    }
+}

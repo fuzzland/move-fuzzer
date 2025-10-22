@@ -139,6 +139,10 @@ impl<EM, Z> Executor<EM, AptosFuzzerInput, AptosFuzzerState, Z> for AptosMoveExe
     ) -> Result<ExitKind, libafl::Error> {
         let (result, outcome, pcs, shift_losses) =
             self.execute_transaction(input.payload().clone(), state.aptos_state(), None);
+        
+        // Update execution counter (required by Executor trait contract)
+        *state.executions_mut() += 1;
+        
         match result {
             Ok(result) => {
                 self.success_count += 1;
@@ -162,7 +166,7 @@ impl<EM, Z> Executor<EM, AptosFuzzerInput, AptosFuzzerState, Z> for AptosMoveExe
                 self.total_instructions_executed += pcs.len() as u64;
                 let cumulative_map = state.cumulative_coverage_mut();
                 
-                // Update AFL-style edge coverage
+                // Update AFL-style edge coverage in observer and cumulative maps
                 for pc in pcs {
                     let cur_id = base_id ^ pc;
                     let idx = ((cur_id ^ self.prev_loc) as usize) & (MAP_SIZE - 1);
@@ -180,7 +184,6 @@ impl<EM, Z> Executor<EM, AptosFuzzerInput, AptosFuzzerState, Z> for AptosMoveExe
                     self.observers.1 .0.set_last(None);
                 }
                 
-                *state.executions_mut() += 1;
                 Ok(ExitKind::Ok)
             }
             Err(vm_status) => {
@@ -200,7 +203,6 @@ impl<EM, Z> Executor<EM, AptosFuzzerInput, AptosFuzzerState, Z> for AptosMoveExe
                     ExecOutcomeKind::InvariantViolation => ExitKind::Crash,
                     ExecOutcomeKind::Panic => ExitKind::Crash,
                 };
-                *state.executions_mut() += 1;
                 Ok(exit_kind)
             }
         }
