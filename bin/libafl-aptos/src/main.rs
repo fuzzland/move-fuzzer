@@ -78,7 +78,8 @@ fn main() {
         state.corpus().count()
     );
 
-    // Add initial seeds to corpus
+    // Prefer adding initial seeds via fuzzer.add_input to fire events and reflect
+    // in monitor
     let initial_inputs = state.take_initial_inputs();
     for input in initial_inputs {
         let _ = fuzzer

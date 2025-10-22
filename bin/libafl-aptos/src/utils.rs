@@ -72,7 +72,7 @@ pub fn print_fuzzer_stats(
 fn count_covered_segments(coverage_map: &[u8], segment_size: usize) -> usize {
     let num_segments = coverage_map.len().div_ceil(segment_size);
     let mut covered = 0;
-    
+
     for seg_idx in 0..num_segments {
         let start = seg_idx * segment_size;
         let end = ((seg_idx + 1) * segment_size).min(coverage_map.len());
@@ -80,6 +80,6 @@ fn count_covered_segments(coverage_map: &[u8], segment_size: usize) -> usize {
             covered += 1;
         }
     }
-    
+
     covered
 }
