@@ -1,5 +1,8 @@
 use std::time::Instant;
 
+/// Size of coverage map segments for statistics reporting
+const COVERAGE_SEGMENT_SIZE: usize = 4096;
+
 // Print fuzzer statistics with coverage breakdown
 pub fn print_fuzzer_stats(
     start_time: Instant,
@@ -59,8 +62,8 @@ pub fn print_fuzzer_stats(
         0.0
     };
 
-    let covered_segments = count_covered_segments(coverage_map, 4096);
-    let total_segments = (coverage_map.len() + 4095) / 4096;
+    let covered_segments = count_covered_segments(coverage_map, COVERAGE_SEGMENT_SIZE);
+    let total_segments = coverage_map.len().div_ceil(COVERAGE_SEGMENT_SIZE);
 
     println!(
         "instrs: {} (avg {:.1}/exec), segments: {}/{}",
@@ -70,7 +73,7 @@ pub fn print_fuzzer_stats(
 
 // Count segments that have any coverage
 fn count_covered_segments(coverage_map: &[u8], segment_size: usize) -> usize {
-    let num_segments = (coverage_map.len() + segment_size - 1) / segment_size;
+    let num_segments = coverage_map.len().div_ceil(segment_size);
     let mut covered = 0;
 
     for seg_idx in 0..num_segments {

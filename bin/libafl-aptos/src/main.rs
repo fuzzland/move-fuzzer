@@ -6,7 +6,7 @@ use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 use aptos_fuzzer::{
-    AbortCodeFeedback, AbortCodeObjective, AptosFuzzerMutator, AptosFuzzerState, AptosMoveExecutor,
+    AbortCodeObjective, AptosFuzzerMutator, AptosFuzzerState, AptosMoveExecutor,
     ShiftOverflowObjective,
 };
 use clap::Parser;
@@ -50,8 +50,7 @@ fn main() {
 
     // Setup executor and feedback
     let mut executor = AptosMoveExecutor::new();
-    let cov_feedback = MaxMapFeedback::new(executor.pc_observer());
-    let mut feedback = EagerOrFeedback::new(cov_feedback, AbortCodeFeedback::new());
+    let mut feedback = MaxMapFeedback::new(executor.pc_observer());
     let objective = EagerOrFeedback::new(ShiftOverflowObjective::new(), AbortCodeObjective::new());
 
     let mon = NopMonitor::new();
@@ -78,7 +77,8 @@ fn main() {
         state.corpus().count()
     );
 
-    // Prefer adding initial seeds via fuzzer.add_input so events fire properly
+    // Prefer adding initial seeds via fuzzer.add_input to fire events and reflect
+    // in monitor
     let initial_inputs = state.take_initial_inputs();
     for input in initial_inputs {
         let _ = fuzzer
