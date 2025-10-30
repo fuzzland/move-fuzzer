@@ -5,7 +5,6 @@ use std::path::{Path, PathBuf};
 use std::time::Duration;
 
 use aptos_move_binary_format::CompiledModule;
-use aptos_vm::aptos_vm::FUZZER_SENDER;
 use aptos_move_core_types::language_storage::ModuleId;
 use libafl::corpus::{Corpus, CorpusId, HasCurrentCorpusId, HasTestcase, InMemoryCorpus, Testcase};
 use libafl::stages::StageId;
@@ -116,19 +115,26 @@ impl AptosFuzzerState {
         // Load MIR Chain and convert to inputs
         if let Some(mir_path) = mir_path {
             match Self::load_chain_from_mir(&mir_path) {
-                Ok(chain) => {
-                    println!("Loaded MIR chain with {} calls", chain.len());
+                Ok(mut chain) => {
+                    let call_count = chain.len();
+                    println!("Loaded MIR chain with {} calls", call_count);
                     
-                    match chain.to_transaction_payload() {
-                        Ok(payloads) => {
-                            for payload in payloads {
-                                let input = AptosFuzzerInput::new(payload);
+                    chain.sort_by_dependencies();
+                    
+                    match chain.to_entry_functions() {
+                        Ok(functions) => {
+                            // Seed corpus with each MIR call as a single-call input
+                            for (idx, func) in functions.into_iter().enumerate() {
+                                let input = AptosFuzzerInput::new(func);
                                 let _ = state.corpus.add(Testcase::new(input));
+                                if (idx + 1) % 10 == 0 || idx + 1 == call_count {
+                                    println!("  Added {}/{} individual calls to corpus", idx + 1, call_count);
+                                }
                             }
-                            println!("Added {} inputs to corpus from MIR", state.corpus.count());
+                            println!("Successfully seeded corpus with {} single-call inputs", state.corpus.count());
                         }
                         Err(e) => {
-                            eprintln!("Failed to convert MIR chain to payloads: {}", e);
+                            eprintln!("Failed to convert MIR chain to entry functions: {}", e);
                         }
                     }
                     state.chain = Some(chain);

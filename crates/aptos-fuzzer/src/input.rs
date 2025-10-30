@@ -1,24 +1,32 @@
-use aptos_types::transaction::TransactionPayload;
+use aptos_types::transaction::EntryFunction;
 use libafl::inputs::Input;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash, Deserialize, Serialize)]
 pub struct AptosFuzzerInput {
-    payload: TransactionPayload,
+    pub calls: Vec<EntryFunction>,
 }
 
 impl Input for AptosFuzzerInput {}
 
 impl AptosFuzzerInput {
-    pub fn new(payload: TransactionPayload) -> Self {
-        Self { payload }
+    pub fn new(call: EntryFunction) -> Self {
+        Self { calls: vec![call] }
     }
-
-    pub fn payload(&self) -> &TransactionPayload {
-        &self.payload
+    
+    pub fn from_calls(calls: Vec<EntryFunction>) -> Self {
+        Self { calls }
     }
-
-    pub fn payload_mut(&mut self) -> &mut TransactionPayload {
-        &mut self.payload
+    
+    pub fn push(&mut self, call: EntryFunction) {
+        self.calls.push(call);
+    }
+    
+    pub fn len(&self) -> usize {
+        self.calls.len()
+    }
+    
+    pub fn is_empty(&self) -> bool {
+        self.calls.is_empty()
     }
 }

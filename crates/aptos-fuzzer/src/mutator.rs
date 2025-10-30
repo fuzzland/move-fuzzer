@@ -1,6 +1,10 @@
 use std::borrow::Cow;
+use std::collections::HashSet;
 
-use aptos_types::transaction::{EntryFunction, Script, TransactionArgument, TransactionPayload};
+use aptos_move_core_types::account_address::AccountAddress;
+use aptos_move_core_types::identifier::Identifier;
+use aptos_move_core_types::language_storage::ModuleId;
+use aptos_types::transaction::EntryFunction;
 use libafl::mutators::{MutationResult, Mutator};
 use libafl::state::HasRand;
 use libafl_bolts::rands::Rand;
@@ -13,7 +17,14 @@ use crate::state::AptosFuzzerState;
 pub struct AptosFuzzerMutator {}
 
 impl AptosFuzzerMutator {
-    fn mutate_entry_function_args(entry_func: &mut EntryFunction, state: &mut AptosFuzzerState) -> bool {
+    fn mutate_call_args(input: &mut AptosFuzzerInput, state: &mut AptosFuzzerState) -> bool {
+        if input.calls.is_empty() {
+            return false;
+        }
+        
+        let call_idx = (state.rand_mut().next() as usize) % input.calls.len();
+        let entry_func = &mut input.calls[call_idx];
+        
         let args = entry_func.args();
         if args.is_empty() {
             return false;
@@ -83,80 +94,128 @@ impl AptosFuzzerMutator {
         }
         true
     }
-
-    /// Mutate a TransactionArgument using state's random source (pure random)
-    fn mutate_transaction_argument(arg: &mut TransactionArgument, state: &mut AptosFuzzerState) -> bool {
-        match arg {
-            TransactionArgument::U8(val) => {
-                *val = (state.rand_mut().next() & 0xFF) as u8;
-                true
-            }
-            TransactionArgument::U16(val) => {
-                *val = (state.rand_mut().next() % 65536) as u16;
-                true
-            }
-            TransactionArgument::U32(val) => {
-                *val = (state.rand_mut().next() & 0xFFFF_FFFF) as u32;
-                true
-            }
-            TransactionArgument::U64(val) => {
-                *val = state.rand_mut().next();
-                true
-            }
-            TransactionArgument::U128(val) => {
-                let hi = state.rand_mut().next() as u128;
-                let lo = state.rand_mut().next() as u128;
-                *val = (hi << 64) | lo;
-                true
-            }
-            TransactionArgument::U256(val) => {
-                let high_part = {
-                    let hi = state.rand_mut().next() as u128;
-                    let lo = state.rand_mut().next() as u128;
-                    (hi << 64) | lo
-                };
-                let low_part = {
-                    let hi = state.rand_mut().next() as u128;
-                    let lo = state.rand_mut().next() as u128;
-                    (hi << 64) | lo
-                };
-                let mut bytes = [0u8; 32];
-                bytes[0..16].copy_from_slice(&low_part.to_le_bytes());
-                bytes[16..32].copy_from_slice(&high_part.to_le_bytes());
-                *val = aptos_move_core_types::u256::U256::from_le_bytes(&bytes);
-                true
-            }
-            TransactionArgument::Bool(val) => {
-                *val = (state.rand_mut().next() & 1) == 0;
-                true
-            }
-            TransactionArgument::Address(_addr) => {
-                let mut addr_bytes = [0u8; 32];
-                for byte in addr_bytes.iter_mut() {
-                    *byte = (state.rand_mut().next() % 256) as u8;
+    
+    fn mutate_add_call_from_chain(state: &mut AptosFuzzerState, input: &mut AptosFuzzerInput) -> bool {
+        let chain = match state.chain() {
+            Some(c) => c.clone(),
+            None => return false,
+        };
+        
+        if chain.is_empty() {
+            return false;
+        }
+        
+        let call_idx = (state.rand_mut().next() as usize) % chain.len();
+        let call = &chain.calls[call_idx];
+        
+        let entry_func = match Self::call_to_entry_function(call) {
+            Ok(ef) => ef,
+            Err(_) => return false,
+        };
+        
+        let insert_pos = Self::find_insertion_position(&chain, &input.calls, call_idx);
+        input.calls.insert(insert_pos, entry_func);
+        
+        true
+    }
+    
+    fn mutate_shuffle_calls(state: &mut AptosFuzzerState, input: &mut AptosFuzzerInput) -> bool {
+        if input.calls.len() < 2 {
+            return false;
+        }
+        
+        let chain = match state.chain() {
+            Some(c) => c.clone(),
+            None => {
+                let idx1 = (state.rand_mut().next() as usize) % input.calls.len();
+                let idx2 = (state.rand_mut().next() as usize) % input.calls.len();
+                if idx1 != idx2 {
+                    input.calls.swap(idx1, idx2);
+                    return true;
                 }
-                *_addr = aptos_move_core_types::account_address::AccountAddress::try_from(addr_bytes.to_vec())
-                    .unwrap_or(*_addr);
-                true
+                return false;
             }
-            TransactionArgument::U8Vector(vec) => {
-                let len = (state.rand_mut().next() % 64) as usize;
-                vec.clear();
-                for _ in 0..len {
-                    vec.push((state.rand_mut().next() & 0xFF) as u8);
-                }
-                true
+        };
+        
+        for _ in 0..10 {
+            let idx1 = (state.rand_mut().next() as usize) % input.calls.len();
+            let idx2 = (state.rand_mut().next() as usize) % input.calls.len();
+            
+            if idx1 == idx2 {
+                continue;
             }
-            TransactionArgument::Serialized(bytes) => {
-                let len = (state.rand_mut().next() % 64) as usize;
-                bytes.clear();
-                bytes.resize(len, 0);
-                for b in bytes.iter_mut() {
-                    *b = (state.rand_mut().next() & 0xFF) as u8;
-                }
-                true
+            
+            if Self::can_swap_safely(&chain, &input.calls, idx1, idx2) {
+                input.calls.swap(idx1, idx2);
+                return true;
             }
         }
+        
+        false
+    }
+    
+    fn call_to_entry_function(call: &crate::mir::Call) -> Result<EntryFunction, String> {
+        let addr_bytes = hex::decode(&call.module_addr)
+            .map_err(|e| format!("Invalid module address: {}", e))?;
+        if addr_bytes.len() != 32 {
+            return Err(format!("Module address must be 32 bytes, got {}", addr_bytes.len()));
+        }
+        let mut addr_array = [0u8; 32];
+        addr_array.copy_from_slice(&addr_bytes);
+        let module_addr = AccountAddress::new(addr_array);
+        
+        let module_name = Identifier::new(call.module.as_str())
+            .map_err(|e| format!("Invalid module name: {}", e))?;
+        let function_name = Identifier::new(call.function.as_str())
+            .map_err(|e| format!("Invalid function name: {}", e))?;
+        
+        let module_id = ModuleId::new(module_addr, module_name);
+        let args = vec![vec![0u8; 8]; call.args.len()];
+        
+        Ok(EntryFunction::new(module_id, function_name, vec![], args))
+    }
+    
+    fn find_insertion_position(chain: &crate::mir::Chain, calls: &[EntryFunction], call_idx: usize) -> usize {
+        let call = &chain.calls[call_idx];
+        
+        let mut requires_structs = HashSet::new();
+        for fact in &call.requires {
+            if let crate::mir::Fact::Exists(res) = fact {
+                requires_structs.insert(&res.struct_name);
+            }
+        }
+        
+        if requires_structs.is_empty() {
+            return 0;
+        }
+        
+        let mut latest_creator_pos = 0;
+        
+        for (pos, _entry_func) in calls.iter().enumerate() {
+            for struct_name in &requires_structs {
+                let creators = chain.calls_creating_struct(struct_name);
+                if !creators.is_empty() {
+                    latest_creator_pos = pos + 1;
+                }
+            }
+        }
+        
+        latest_creator_pos.min(calls.len())
+    }
+    
+    fn can_swap_safely(
+        _chain: &crate::mir::Chain,
+        _calls: &[EntryFunction],
+        idx1: usize,
+        idx2: usize,
+    ) -> bool {
+        let (_earlier, later) = if idx1 < idx2 { (idx1, idx2) } else { (idx2, idx1) };
+        
+        if later - idx1.min(idx2) == 1 {
+            return true;
+        }
+        
+        true
     }
 }
 
@@ -166,11 +225,14 @@ impl Mutator<AptosFuzzerInput, AptosFuzzerState> for AptosFuzzerMutator {
         state: &mut AptosFuzzerState,
         input: &mut AptosFuzzerInput,
     ) -> Result<MutationResult, libafl::Error> {
-        let payload = input.payload_mut();
-        let mutated = match payload {
-            TransactionPayload::EntryFunction(entry_func) => Self::mutate_entry_function_args(entry_func, state),
-            TransactionPayload::Script(script) => Self::mutate_script_args(script, state),
-            _ => false, // Other payload types not supported for current mutator
+        let choice = state.rand_mut().next() % 100;
+        
+        let mutated = if choice < 60 {
+            Self::mutate_call_args(input, state)
+        } else if choice < 80 {
+            Self::mutate_add_call_from_chain(state, input)
+        } else {
+            Self::mutate_shuffle_calls(state, input)
         };
 
         if mutated {

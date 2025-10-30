@@ -415,6 +415,90 @@ impl Chain {
     pub fn is_empty(&self) -> bool {
         self.calls.is_empty()
     }
+    
+    pub fn sort_by_dependencies(&mut self) {
+        use std::collections::{HashMap, HashSet};
+        
+        let mut creates: HashMap<usize, HashSet<String>> = HashMap::new();
+        let mut requires: HashMap<usize, HashSet<String>> = HashMap::new();
+        
+        for (idx, call) in self.calls.iter().enumerate() {
+            for effect in &call.effects {
+                if let Effect::Creates(res_loc) = effect {
+                    creates.entry(idx).or_default().insert(res_loc.struct_name.clone());
+                }
+            }
+            
+            for fact in &call.requires {
+                if let Fact::Exists(res_loc) = fact {
+                    requires.entry(idx).or_default().insert(res_loc.struct_name.clone());
+                }
+            }
+        }
+        
+        let mut sorted_indices = Vec::new();
+        let mut satisfied_structs: HashSet<String> = HashSet::new();
+        let mut remaining: HashSet<usize> = (0..self.calls.len()).collect();
+        
+        while !remaining.is_empty() {
+            let mut made_progress = false;
+            
+            let candidates: Vec<usize> = remaining.iter()
+                .filter(|&&idx| {
+                    requires.get(&idx)
+                        .map(|reqs| reqs.iter().all(|s| satisfied_structs.contains(s)))
+                        .unwrap_or(true)
+                })
+                .copied()
+                .collect();
+            
+            for idx in candidates {
+                sorted_indices.push(idx);
+                remaining.remove(&idx);
+                
+                if let Some(created) = creates.get(&idx) {
+                    satisfied_structs.extend(created.iter().cloned());
+                }
+                
+                made_progress = true;
+            }
+            
+            if !made_progress {
+                let mut rest: Vec<_> = remaining.iter().copied().collect();
+                rest.sort();
+                sorted_indices.extend(rest);
+                break;
+            }
+        }
+        
+        let mut new_calls = Vec::with_capacity(self.calls.len());
+        for idx in sorted_indices {
+            new_calls.push(self.calls[idx].clone());
+        }
+        self.calls = new_calls;
+    }
+    
+    pub fn calls_creating_struct(&self, struct_name: &str) -> Vec<usize> {
+        self.calls.iter().enumerate()
+            .filter(|(_, call)| {
+                call.effects.iter().any(|eff| {
+                    matches!(eff, Effect::Creates(res) if res.struct_name == struct_name)
+                })
+            })
+            .map(|(idx, _)| idx)
+            .collect()
+    }
+    
+    pub fn calls_requiring_struct(&self, struct_name: &str) -> Vec<usize> {
+        self.calls.iter().enumerate()
+            .filter(|(_, call)| {
+                call.requires.iter().any(|fact| {
+                    matches!(fact, Fact::Exists(res) if res.struct_name == struct_name)
+                })
+            })
+            .map(|(idx, _)| idx)
+            .collect()
+    }
 }
 
 // --------------------------- Traits & Helpers -------------------------------
@@ -637,25 +721,25 @@ pub fn resloc_simple(struct_name: &str, addr: AddrExpr) -> ResLoc {
 use aptos_move_core_types::account_address::AccountAddress;
 use aptos_move_core_types::identifier::Identifier;
 use aptos_move_core_types::language_storage::ModuleId;
-use aptos_types::transaction::{EntryFunction, TransactionPayload};
+use aptos_types::transaction::EntryFunction;
 use aptos_vm::aptos_vm::FUZZER_SENDER;
 use bcs;
 
 impl Chain {
-    /// Convert Chain calls to TransactionPayloads
-    pub fn to_transaction_payload(&self) -> Result<Vec<TransactionPayload>, String> {
-        let mut payloads = Vec::new();
+    /// Convert Chain calls to Input calls
+    pub fn to_entry_functions(&self) -> Result<Vec<EntryFunction>, String> {
+        let mut functions = Vec::new();
         
         for call in &self.calls {
-            let payload = call_to_payload(call)?;
-            payloads.push(payload);
+            let entry_fn = call_to_entry_function(call)?;
+            functions.push(entry_fn);
         }
         
-        Ok(payloads)
+        Ok(functions)
     }
 }
 
-fn call_to_payload(call: &Call) -> Result<TransactionPayload, String> {
+fn call_to_entry_function(call: &Call) -> Result<EntryFunction, String> {
     // Parse module address
     let addr_bytes = hex::decode(&call.module_addr)
         .map_err(|e| format!("Invalid module address: {}", e))?;
@@ -703,7 +787,7 @@ fn call_to_payload(call: &Call) -> Result<TransactionPayload, String> {
     }
     
     let entry_fn = EntryFunction::new(module_id, function_name, ty_args, bcs_args);
-    Ok(TransactionPayload::EntryFunction(entry_fn))
+    Ok(entry_fn)
 }
 
 fn generate_value_for_type(ty: &TypeTagLite) -> Result<Vec<u8>, String> {

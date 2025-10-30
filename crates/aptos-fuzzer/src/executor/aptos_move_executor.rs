@@ -138,13 +138,36 @@ impl<EM, Z> Executor<EM, AptosFuzzerInput, AptosFuzzerState, Z> for AptosMoveExe
     ) -> Result<ExitKind, libafl::Error> {
         state.clear_current_execution_path();
         
-        let (result, outcome, pcs, shift_losses) =
-            self.execute_transaction(input.payload().clone(), state.aptos_state(), Some(FUZZER_SENDER));
+        if input.calls.is_empty() {
+            return Ok(ExitKind::Ok);
+        }
+        
+        let mut all_pcs = Vec::new();
+        let mut all_shift_losses = Vec::new();
+        let mut final_outcome = ExecOutcomeKind::Ok;
+        let mut final_result = None;
+        
+        // Execute each call in sequence
+        for call in &input.calls {
+            let payload = TransactionPayload::EntryFunction(call.clone());
+            let (result, outcome, pcs, shift_losses) =
+                self.execute_transaction(payload, state.aptos_state(), Some(FUZZER_SENDER));
+            
+            all_pcs.extend(pcs);
+            all_shift_losses.extend(shift_losses);
+            final_outcome = outcome;
+            final_result = Some(result);
+            
+            // Stop execution on error
+            if final_result.as_ref().unwrap().is_err() {
+                break;
+            }
+        }
 
-        // Update execution counter (required by Executor trait contract)
+        // Update execution counter
         *state.executions_mut() += 1;
 
-        match result {
+        match final_result.unwrap() {
             Ok(result) => {
                 self.success_count += 1;
                 let map = self.observers.0.as_slice_mut();
@@ -153,26 +176,22 @@ impl<EM, Z> Executor<EM, AptosFuzzerInput, AptosFuzzerState, Z> for AptosMoveExe
                 }
                 self.prev_loc = 0;
 
-                // Build stable per-function base ID
-                let base_id: u32 = match input.payload() {
-                    TransactionPayload::EntryFunction(ef) => {
-                        let (module, function, _ty_args, _args) = ef.clone().into_inner();
-                        let mut buf = Vec::new();
-                        buf.extend_from_slice(module.address().as_ref());
-                        buf.extend_from_slice(module.name().as_str().as_bytes());
-                        buf.extend_from_slice(function.as_str().as_bytes());
-                        Self::hash32(&buf)
-                    }
-                    TransactionPayload::Script(script) => Self::hash32(script.code()),
-                    _ => 0,
+                // Use first call for base ID
+                let base_id: u32 = {
+                    let call = &input.calls[0];
+                    let (module, function, _ty_args, _args) = call.clone().into_inner();
+                    let mut buf = Vec::new();
+                    buf.extend_from_slice(module.address().as_ref());
+                    buf.extend_from_slice(module.name().as_str().as_bytes());
+                    buf.extend_from_slice(function.as_str().as_bytes());
+                    Self::hash32(&buf)
                 };
 
-                self.total_instructions_executed += pcs.len() as u64;
+                self.total_instructions_executed += all_pcs.len() as u64;
 
                 {
                     let cumulative_map = state.cumulative_coverage_mut();
-                    // Update AFL-style edge coverage in observer and cumulative maps
-                    for &pc in &pcs {
+                    for &pc in &all_pcs {
                         let cur_id = base_id ^ pc;
                         let idx = ((cur_id ^ self.prev_loc) as usize) & (MAP_SIZE - 1);
                         map[idx] = map[idx].saturating_add(1);
@@ -181,10 +200,9 @@ impl<EM, Z> Executor<EM, AptosFuzzerInput, AptosFuzzerState, Z> for AptosMoveExe
                     }
                 }
 
-                state.set_current_execution_path(pcs);
+                state.set_current_execution_path(all_pcs);
 
-                // Update observers
-                let cause_loss = shift_losses.into_iter().any(|b| b);
+                let cause_loss = all_shift_losses.into_iter().any(|b| b);
                 self.observers.1 .1 .0.set_cause_loss(cause_loss);
                 if let TransactionStatus::Keep(ExecutionStatus::MoveAbort { location: _, code, .. }) = &result.status {
                     self.observers.1 .0.set_last(Some(*code));
@@ -202,13 +220,13 @@ impl<EM, Z> Executor<EM, AptosFuzzerInput, AptosFuzzerState, Z> for AptosMoveExe
                 }
                 self.prev_loc = 0;
                 self.observers.1 .1 .0.set_cause_loss(false);
-                state.set_current_execution_path(pcs);
+                state.set_current_execution_path(all_pcs);
                 if let VMStatus::MoveAbort(ref _loc, code) = vm_status {
                     self.observers.1 .0.set_last(Some(code));
                 } else {
                     self.observers.1 .0.set_last(None);
                 }
-                let exit_kind = match outcome {
+                let exit_kind = match final_outcome {
                     ExecOutcomeKind::Ok => ExitKind::Ok,
                     ExecOutcomeKind::MoveAbort(_) => ExitKind::Ok,
                     ExecOutcomeKind::OutOfGas => ExitKind::Ok,
