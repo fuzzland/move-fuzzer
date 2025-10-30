@@ -29,7 +29,9 @@ bytes = { workspace = true }
 libafl = { workspace = true }
 libafl_bolts = { workspace = true }
 serde = { workspace = true }
+serde_json = { workspace = true }
 serde_yaml = "0.9"
 bcs = { workspace = true }
+hex = { workspace = true }
 dashmap = { workspace = true }
 anyhow = { workspace = true }

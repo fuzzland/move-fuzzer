@@ -33,6 +33,10 @@ struct Cli {
     #[arg(long = "module-path", value_name = "MODULE_PATH")]
     module_path: Option<PathBuf>,
 
+    /// Path to a MIR JSON file to initialize corpus
+    #[arg(long = "mir-path", value_name = "MIR_PATH")]
+    mir_path: Option<PathBuf>,
+
     /// Timeout in seconds (0 = no timeout, run indefinitely)
     #[arg(long = "timeout", short = 't', default_value = "0")]
     timeout_seconds: u64,
@@ -57,15 +61,25 @@ fn main() {
     let mut mgr = SimpleEventManager::new(mon);
     let scheduler = QueueScheduler::new();
 
-    let abi = cli
-        .abi_path
-        .clone()
-        .unwrap_or_else(|| panic!("--abi-path is required (no fallback)."));
-    let module = cli
-        .module_path
-        .clone()
-        .unwrap_or_else(|| panic!("--module-path is required (no fallback)."));
-    let mut state = AptosFuzzerState::new(Some(abi), Some(module));
+    // Initialize state either from MIR file or from ABI
+    let mut state = if let Some(mir_path) = cli.mir_path.clone() {
+        let module = cli
+            .module_path
+            .clone()
+            .unwrap_or_else(|| panic!("--module-path is required when using --mir-path."));
+        AptosFuzzerState::load_from_mir(Some(mir_path), Some(module))
+    } else {
+        let abi = cli
+            .abi_path
+            .clone()
+            .unwrap_or_else(|| panic!("--abi-path is required (no fallback)."));
+        let module = cli
+            .module_path
+            .clone()
+            .unwrap_or_else(|| panic!("--module-path is required (no fallback)."));
+        AptosFuzzerState::new(Some(abi), Some(module))
+    };
+    
     let _ = feedback.init_state(&mut state);
     let mut fuzzer = StdFuzzer::new(scheduler, feedback, objective);
 

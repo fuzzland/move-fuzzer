@@ -903,6 +903,7 @@ dependencies = [
  "bcs 0.1.6",
  "bytes",
  "dashmap 6.1.0",
+ "hex",
  "libafl",
  "libafl_bolts",
  "move-binary-format",
@@ -911,6 +912,7 @@ dependencies = [
  "move-vm-runtime",
  "move-vm-types",
  "serde",
+ "serde_json",
  "serde_yaml 0.9.34+deprecated",
 ]
 

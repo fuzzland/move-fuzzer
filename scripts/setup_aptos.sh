@@ -7,20 +7,20 @@ echo "[*] Aptos Move Compilation and Fuzzing Script"
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 # Parse command line arguments
-CONTRACT_NAME="aptos-demo"
+CONTRACT_NAME="fuzzing-demo"
 TIMEOUT_DURATION=20
 
 usage() {
     echo "Usage: $0 [OPTIONS]"
     echo "Options:"
-    echo "  -c, --contract NAME    Contract name to fuzz (default: aptos-demo)"
+    echo "  -c, --contract NAME    Contract name to fuzz (default: fuzzing-demo)"
     echo "                         Available: aptos-demo, fuzzing-demo"
     echo "  -t, --timeout SECONDS  Timeout duration for fuzzing (default: 20)"
     echo "  -h, --help             Display this help message"
     echo ""
     echo "Examples:"
-    echo "  $0                                    # Use default aptos-demo"
-    echo "  $0 -c fuzzing-demo                    # Fuzz the fuzzing-demo contract"
+    echo "  $0                                    # Use default fuzzing-demo"
+    echo "  $0 -c aptos-demo                      # Fuzz the aptos-demo contract"
     echo "  $0 -c fuzzing-demo -t 60              # Fuzz for 60 seconds"
     exit 1
 }
@@ -116,15 +116,15 @@ fi
 
 MODULE_PATH="$MODULE_FILE"
 
-# Find the ABI directory
-ABI_PATH=$(find "$BUILD_DIR" -type d -name "abis" -not -path "*/dependencies/*" | head -n 1)
-if [[ -z "$ABI_PATH" ]]; then
-    echo "[-] Error: No ABI directory found in $BUILD_DIR"
+# Find the MIR JSON file
+MIR_PATH="$CONTRACT_DIR/mir.json"
+if [[ ! -f "$MIR_PATH" ]]; then
+    echo "[-] Error: MIR file not found at: $MIR_PATH"
     exit 1
 fi
 
 echo "[*] Module path: $MODULE_PATH"
-echo "[*] ABI path: $ABI_PATH"
+echo "[*] MIR path: $MIR_PATH"
 
 # Verify the paths exist
 if [[ ! -f "$MODULE_PATH" ]]; then
@@ -132,19 +132,14 @@ if [[ ! -f "$MODULE_PATH" ]]; then
     exit 1
 fi
 
-if [[ ! -d "$ABI_PATH" ]]; then
-    echo "[-] Error: ABI directory not found at: $ABI_PATH"
-    exit 1
-fi
-
 echo "[+] Step 4: Running libafl-aptos fuzzer..."
 cd "$PROJECT_ROOT"
 
 echo "[*] Running command:"
-echo "[*] $LIBAFL_APTOS_BIN --module-path \"$MODULE_PATH\" --abi-path \"$ABI_PATH\" --timeout $TIMEOUT_DURATION"
+echo "[*] $LIBAFL_APTOS_BIN --mir-path \"$MIR_PATH\" --module-path \"$MODULE_PATH\" --timeout $TIMEOUT_DURATION"
 echo ""
 
 # Run the fuzzer with built-in timeout support
-"$LIBAFL_APTOS_BIN" --module-path "$MODULE_PATH" --abi-path "$ABI_PATH" --timeout "$TIMEOUT_DURATION"
+"$LIBAFL_APTOS_BIN" --mir-path "$MIR_PATH" --module-path "$MODULE_PATH" --timeout "$TIMEOUT_DURATION"
 
 echo "[+] Fuzzing completed"

@@ -1,0 +1,943 @@
+{
+    "calls": [
+      {
+        "id": 0,
+        "module_addr": "0000000000000000000000000000000000000000000000000000000000000042",
+        "module": "complex_fuzzing",
+        "function": "branching_arithmetic",
+        "ty_args": [],
+        "args": [
+          {
+            "Var": {
+              "id": 0,
+              "ty": "Signer"
+            }
+          },
+          {
+            "Var": {
+              "id": 1,
+              "ty": "U64"
+            }
+          },
+          {
+            "Var": {
+              "id": 2,
+              "ty": "U64"
+            }
+          },
+          {
+            "Var": {
+              "id": 3,
+              "ty": "U8"
+            }
+          }
+        ],
+        "acquires": [],
+        "requires": [],
+        "effects": [],
+        "ret": null
+      },
+      {
+        "id": 1,
+        "module_addr": "0000000000000000000000000000000000000000000000000000000000000042",
+        "module": "complex_fuzzing",
+        "function": "check_invariants",
+        "ty_args": [],
+        "args": [
+          {
+            "Var": {
+              "id": 0,
+              "ty": "Signer"
+            }
+          },
+          {
+            "Var": {
+              "id": 1,
+              "ty": "U64"
+            }
+          },
+          {
+            "Var": {
+              "id": 2,
+              "ty": "U8"
+            }
+          }
+        ],
+        "acquires": [],
+        "requires": [],
+        "effects": [],
+        "ret": null
+      },
+      {
+        "id": 2,
+        "module_addr": "0000000000000000000000000000000000000000000000000000000000000042",
+        "module": "complex_fuzzing",
+        "function": "check_overflow_conditions",
+        "ty_args": [],
+        "args": [
+          {
+            "Var": {
+              "id": 0,
+              "ty": "Signer"
+            }
+          },
+          {
+            "Var": {
+              "id": 1,
+              "ty": "U64"
+            }
+          },
+          {
+            "Var": {
+              "id": 2,
+              "ty": "U8"
+            }
+          }
+        ],
+        "acquires": [],
+        "requires": [],
+        "effects": [],
+        "ret": null
+      },
+      {
+        "id": 3,
+        "module_addr": "0000000000000000000000000000000000000000000000000000000000000042",
+        "module": "complex_fuzzing",
+        "function": "dangerous_division",
+        "ty_args": [],
+        "args": [
+          {
+            "Var": {
+              "id": 0,
+              "ty": "Signer"
+            }
+          },
+          {
+            "Var": {
+              "id": 1,
+              "ty": "U64"
+            }
+          },
+          {
+            "Var": {
+              "id": 2,
+              "ty": "U64"
+            }
+          }
+        ],
+        "acquires": [],
+        "requires": [],
+        "effects": [],
+        "ret": null
+      },
+      {
+        "id": 4,
+        "module_addr": "0000000000000000000000000000000000000000000000000000000000000042",
+        "module": "complex_fuzzing",
+        "function": "dangerous_multiplication",
+        "ty_args": [],
+        "args": [
+          {
+            "Var": {
+              "id": 0,
+              "ty": "Signer"
+            }
+          },
+          {
+            "Var": {
+              "id": 1,
+              "ty": "U64"
+            }
+          },
+          {
+            "Var": {
+              "id": 2,
+              "ty": "U64"
+            }
+          }
+        ],
+        "acquires": [],
+        "requires": [],
+        "effects": [],
+        "ret": null
+      },
+      {
+        "id": 5,
+        "module_addr": "0000000000000000000000000000000000000000000000000000000000000042",
+        "module": "complex_fuzzing",
+        "function": "explore_path",
+        "ty_args": [],
+        "args": [
+          {
+            "Var": {
+              "id": 0,
+              "ty": "Signer"
+            }
+          },
+          {
+            "Var": {
+              "id": 1,
+              "ty": "U8"
+            }
+          },
+          {
+            "Var": {
+              "id": 2,
+              "ty": "U8"
+            }
+          },
+          {
+            "Var": {
+              "id": 3,
+              "ty": "U8"
+            }
+          }
+        ],
+        "acquires": [
+          "@MultiPathState"
+        ],
+        "requires": [
+          {
+            "Exists": {
+              "struct_name": "@MultiPathState",
+              "addr": {
+                "Var": {
+                  "id": 0,
+                  "ty": "Signer"
+                }
+              }
+            }
+          }
+        ],
+        "effects": [],
+        "ret": null
+      },
+      {
+        "id": 6,
+        "module_addr": "0000000000000000000000000000000000000000000000000000000000000042",
+        "module": "complex_fuzzing",
+        "function": "init_arithmetic_state",
+        "ty_args": [],
+        "args": [
+          {
+            "Var": {
+              "id": 0,
+              "ty": "Signer"
+            }
+          },
+          {
+            "Var": {
+              "id": 1,
+              "ty": "U64"
+            }
+          },
+          {
+            "Var": {
+              "id": 2,
+              "ty": "U8"
+            }
+          }
+        ],
+        "acquires": [],
+        "requires": [
+          {
+            "Exists": {
+              "struct_name": "@ArithmeticState",
+              "addr": {
+                "Var": {
+                  "id": 0,
+                  "ty": "Signer"
+                }
+              }
+            }
+          }
+        ],
+        "effects": [
+          {
+            "Creates": {
+              "struct_name": "@ArithmeticState",
+              "addr": {
+                "Literal": "unknown"
+              }
+            }
+          }
+        ],
+        "ret": null
+      },
+      {
+        "id": 7,
+        "module_addr": "0000000000000000000000000000000000000000000000000000000000000042",
+        "module": "complex_fuzzing",
+        "function": "init_multi_path",
+        "ty_args": [],
+        "args": [
+          {
+            "Var": {
+              "id": 0,
+              "ty": "Signer"
+            }
+          }
+        ],
+        "acquires": [],
+        "requires": [
+          {
+            "Exists": {
+              "struct_name": "@MultiPathState",
+              "addr": {
+                "Var": {
+                  "id": 0,
+                  "ty": "Signer"
+                }
+              }
+            }
+          }
+        ],
+        "effects": [
+          {
+            "Creates": {
+              "struct_name": "@MultiPathState",
+              "addr": {
+                "Var": {
+                  "id": 0,
+                  "ty": "Signer"
+                }
+              }
+            }
+          }
+        ],
+        "ret": null
+      },
+      {
+        "id": 8,
+        "module_addr": "0000000000000000000000000000000000000000000000000000000000000042",
+        "module": "complex_fuzzing",
+        "function": "init_nested_state",
+        "ty_args": [],
+        "args": [
+          {
+            "Var": {
+              "id": 0,
+              "ty": "Signer"
+            }
+          },
+          {
+            "Var": {
+              "id": 1,
+              "ty": "U64"
+            }
+          },
+          {
+            "Var": {
+              "id": 2,
+              "ty": "U64"
+            }
+          },
+          {
+            "Var": {
+              "id": 3,
+              "ty": "U64"
+            }
+          },
+          {
+            "Var": {
+              "id": 4,
+              "ty": "U8"
+            }
+          }
+        ],
+        "acquires": [],
+        "requires": [
+          {
+            "Exists": {
+              "struct_name": "@NestedState",
+              "addr": {
+                "Var": {
+                  "id": 0,
+                  "ty": "Signer"
+                }
+              }
+            }
+          }
+        ],
+        "effects": [
+          {
+            "Creates": {
+              "struct_name": "@NestedState",
+              "addr": {
+                "Literal": "unknown"
+              }
+            }
+          }
+        ],
+        "ret": null
+      },
+      {
+        "id": 9,
+        "module_addr": "0000000000000000000000000000000000000000000000000000000000000042",
+        "module": "complex_fuzzing",
+        "function": "init_state_machine",
+        "ty_args": [],
+        "args": [
+          {
+            "Var": {
+              "id": 0,
+              "ty": "Signer"
+            }
+          },
+          {
+            "Var": {
+              "id": 1,
+              "ty": "U64"
+            }
+          }
+        ],
+        "acquires": [],
+        "requires": [
+          {
+            "Exists": {
+              "struct_name": "@StateMachine",
+              "addr": {
+                "Var": {
+                  "id": 0,
+                  "ty": "Signer"
+                }
+              }
+            }
+          }
+        ],
+        "effects": [
+          {
+            "Creates": {
+              "struct_name": "@StateMachine",
+              "addr": {
+                "Literal": "unknown"
+              }
+            }
+          }
+        ],
+        "ret": null
+      },
+      {
+        "id": 10,
+        "module_addr": "0000000000000000000000000000000000000000000000000000000000000042",
+        "module": "complex_fuzzing",
+        "function": "magic_number_hunter",
+        "ty_args": [],
+        "args": [
+          {
+            "Var": {
+              "id": 0,
+              "ty": "Signer"
+            }
+          },
+          {
+            "Var": {
+              "id": 1,
+              "ty": "U64"
+            }
+          }
+        ],
+        "acquires": [],
+        "requires": [],
+        "effects": [],
+        "ret": null
+      },
+      {
+        "id": 11,
+        "module_addr": "0000000000000000000000000000000000000000000000000000000000000042",
+        "module": "complex_fuzzing",
+        "function": "nested_assertions",
+        "ty_args": [],
+        "args": [
+          {
+            "Var": {
+              "id": 0,
+              "ty": "Signer"
+            }
+          },
+          {
+            "Var": {
+              "id": 1,
+              "ty": "U64"
+            }
+          },
+          {
+            "Var": {
+              "id": 2,
+              "ty": "U64"
+            }
+          },
+          {
+            "Var": {
+              "id": 3,
+              "ty": "U64"
+            }
+          }
+        ],
+        "acquires": [],
+        "requires": [],
+        "effects": [],
+        "ret": null
+      },
+      {
+        "id": 12,
+        "module_addr": "0000000000000000000000000000000000000000000000000000000000000042",
+        "module": "complex_fuzzing",
+        "function": "nested_conditional_arithmetic",
+        "ty_args": [],
+        "args": [
+          {
+            "Var": {
+              "id": 0,
+              "ty": "Signer"
+            }
+          },
+          {
+            "Var": {
+              "id": 1,
+              "ty": "U64"
+            }
+          },
+          {
+            "Var": {
+              "id": 2,
+              "ty": "U64"
+            }
+          },
+          {
+            "Var": {
+              "id": 3,
+              "ty": "U64"
+            }
+          },
+          {
+            "Var": {
+              "id": 4,
+              "ty": "U8"
+            }
+          }
+        ],
+        "acquires": [],
+        "requires": [],
+        "effects": [],
+        "ret": null
+      },
+      {
+        "id": 13,
+        "module_addr": "0000000000000000000000000000000000000000000000000000000000000042",
+        "module": "complex_fuzzing",
+        "function": "nested_state_operation",
+        "ty_args": [],
+        "args": [
+          {
+            "Var": {
+              "id": 0,
+              "ty": "Signer"
+            }
+          },
+          {
+            "Var": {
+              "id": 1,
+              "ty": "U64"
+            }
+          },
+          {
+            "Var": {
+              "id": 2,
+              "ty": "U8"
+            }
+          }
+        ],
+        "acquires": [
+          "@NestedState"
+        ],
+        "requires": [
+          {
+            "Exists": {
+              "struct_name": "@NestedState",
+              "addr": {
+                "Var": {
+                  "id": 0,
+                  "ty": "Signer"
+                }
+              }
+            }
+          }
+        ],
+        "effects": [],
+        "ret": null
+      },
+      {
+        "id": 14,
+        "module_addr": "0000000000000000000000000000000000000000000000000000000000000042",
+        "module": "complex_fuzzing",
+        "function": "range_based_branches",
+        "ty_args": [],
+        "args": [
+          {
+            "Var": {
+              "id": 0,
+              "ty": "Signer"
+            }
+          },
+          {
+            "Var": {
+              "id": 1,
+              "ty": "U64"
+            }
+          }
+        ],
+        "acquires": [],
+        "requires": [],
+        "effects": [],
+        "ret": null
+      },
+      {
+        "id": 15,
+        "module_addr": "0000000000000000000000000000000000000000000000000000000000000042",
+        "module": "complex_fuzzing",
+        "function": "state_transition",
+        "ty_args": [],
+        "args": [
+          {
+            "Var": {
+              "id": 0,
+              "ty": "Signer"
+            }
+          },
+          {
+            "Var": {
+              "id": 1,
+              "ty": "U64"
+            }
+          }
+        ],
+        "acquires": [
+          "@StateMachine"
+        ],
+        "requires": [
+          {
+            "Exists": {
+              "struct_name": "@StateMachine",
+              "addr": {
+                "Var": {
+                  "id": 0,
+                  "ty": "Signer"
+                }
+              }
+            }
+          }
+        ],
+        "effects": [],
+        "ret": null
+      },
+      {
+        "id": 16,
+        "module_addr": "0000000000000000000000000000000000000000000000000000000000000042",
+        "module": "complex_fuzzing",
+        "function": "stateful_arithmetic",
+        "ty_args": [],
+        "args": [
+          {
+            "Var": {
+              "id": 0,
+              "ty": "Signer"
+            }
+          },
+          {
+            "Var": {
+              "id": 1,
+              "ty": "U64"
+            }
+          },
+          {
+            "Var": {
+              "id": 2,
+              "ty": "U8"
+            }
+          }
+        ],
+        "acquires": [
+          "@ArithmeticState"
+        ],
+        "requires": [
+          {
+            "Exists": {
+              "struct_name": "@ArithmeticState",
+              "addr": {
+                "Var": {
+                  "id": 0,
+                  "ty": "Signer"
+                }
+              }
+            }
+          }
+        ],
+        "effects": [],
+        "ret": null
+      },
+      {
+        "id": 17,
+        "module_addr": "0000000000000000000000000000000000000000000000000000000000000042",
+        "module": "complex_fuzzing",
+        "function": "test_shift_overflow_check",
+        "ty_args": [],
+        "args": [
+          {
+            "Var": {
+              "id": 0,
+              "ty": "Signer"
+            }
+          },
+          {
+            "Var": {
+              "id": 1,
+              "ty": "Address"
+            }
+          },
+          {
+            "Var": {
+              "id": 2,
+              "ty": "U8"
+            }
+          }
+        ],
+        "acquires": [],
+        "requires": [],
+        "effects": [],
+        "ret": null
+      },
+      {
+        "id": 18,
+        "module_addr": "0000000000000000000000000000000000000000000000000000000000000042",
+        "module": "complex_fuzzing",
+        "function": "vector_operations",
+        "ty_args": [],
+        "args": [
+          {
+            "Var": {
+              "id": 0,
+              "ty": "Signer"
+            }
+          },
+          {
+            "Var": {
+              "id": 1,
+              "ty": {
+                "Vector": "U64"
+              }
+            }
+          },
+          {
+            "Var": {
+              "id": 2,
+              "ty": "U8"
+            }
+          }
+        ],
+        "acquires": [],
+        "requires": [],
+        "effects": [],
+        "ret": null
+      }
+    ],
+    "struct_defs": {
+      "@ArithmeticEvent": {
+        "tag": {
+          "address": "0000000000000000000000000000000000000000000000000000000000000042",
+          "module": "complex_fuzzing",
+          "name": "ArithmeticEvent",
+          "ty_args": []
+        },
+        "fields": [
+          {
+            "name": "operation",
+            "ty": "U8"
+          },
+          {
+            "name": "value1",
+            "ty": "U64"
+          },
+          {
+            "name": "value2",
+            "ty": "U64"
+          },
+          {
+            "name": "result",
+            "ty": "U64"
+          }
+        ]
+      },
+      "@ArithmeticState": {
+        "tag": {
+          "address": "0000000000000000000000000000000000000000000000000000000000000042",
+          "module": "complex_fuzzing",
+          "name": "ArithmeticState",
+          "ty_args": []
+        },
+        "fields": [
+          {
+            "name": "accumulator",
+            "ty": "U64"
+          },
+          {
+            "name": "multiplier",
+            "ty": "U8"
+          },
+          {
+            "name": "operation_count",
+            "ty": "U64"
+          }
+        ]
+      },
+      "@ComplexConfig": {
+        "tag": {
+          "address": "0000000000000000000000000000000000000000000000000000000000000042",
+          "module": "complex_fuzzing",
+          "name": "ComplexConfig",
+          "ty_args": []
+        },
+        "fields": []
+      },
+      "@MultiPathState": {
+        "tag": {
+          "address": "0000000000000000000000000000000000000000000000000000000000000042",
+          "module": "complex_fuzzing",
+          "name": "MultiPathState",
+          "ty_args": []
+        },
+        "fields": [
+          {
+            "name": "path_taken",
+            "ty": {
+              "Vector": "U8"
+            }
+          },
+          {
+            "name": "depth",
+            "ty": "U8"
+          },
+          {
+            "name": "score",
+            "ty": "U64"
+          }
+        ]
+      },
+      "@NestedState": {
+        "tag": {
+          "address": "0000000000000000000000000000000000000000000000000000000000000042",
+          "module": "complex_fuzzing",
+          "name": "NestedState",
+          "ty_args": []
+        },
+        "fields": [
+          {
+            "name": "value",
+            "ty": "U64"
+          },
+          {
+            "name": "config",
+            "ty": {
+              "Struct": {
+                "address": "0000000000000000000000000000000000000000000000000000000000000042",
+                "module": "complex_fuzzing",
+                "name": "ComplexConfig",
+                "ty_args": []
+              }
+            }
+          },
+          {
+            "name": "flags",
+            "ty": {
+              "Vector": "U8"
+            }
+          }
+        ]
+      },
+      "@OverflowDetectedEvent": {
+        "tag": {
+          "address": "0000000000000000000000000000000000000000000000000000000000000042",
+          "module": "complex_fuzzing",
+          "name": "OverflowDetectedEvent",
+          "ty_args": []
+        },
+        "fields": [
+          {
+            "name": "operation_type",
+            "ty": "U8"
+          },
+          {
+            "name": "value",
+            "ty": "U64"
+          }
+        ]
+      },
+      "@PathDiscoveryEvent": {
+        "tag": {
+          "address": "0000000000000000000000000000000000000000000000000000000000000042",
+          "module": "complex_fuzzing",
+          "name": "PathDiscoveryEvent",
+          "ty_args": []
+        },
+        "fields": [
+          {
+            "name": "path_id",
+            "ty": "U8"
+          },
+          {
+            "name": "depth",
+            "ty": "U8"
+          },
+          {
+            "name": "value",
+            "ty": "U64"
+          }
+        ]
+      },
+      "@StateChangeEvent": {
+        "tag": {
+          "address": "0000000000000000000000000000000000000000000000000000000000000042",
+          "module": "complex_fuzzing",
+          "name": "StateChangeEvent",
+          "ty_args": []
+        },
+        "fields": [
+          {
+            "name": "old_state",
+            "ty": "U8"
+          },
+          {
+            "name": "new_state",
+            "ty": "U8"
+          },
+          {
+            "name": "trigger_value",
+            "ty": "U64"
+          }
+        ]
+      },
+      "@StateMachine": {
+        "tag": {
+          "address": "0000000000000000000000000000000000000000000000000000000000000042",
+          "module": "complex_fuzzing",
+          "name": "StateMachine",
+          "ty_args": []
+        },
+        "fields": [
+          {
+            "name": "current_state",
+            "ty": "U8"
+          },
+          {
+            "name": "transition_count",
+            "ty": "U64"
+          },
+          {
+            "name": "data",
+            "ty": "U64"
+          }
+        ]
+      }
+    },
+    "metadata": {}
+  }

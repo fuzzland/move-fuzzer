@@ -10,6 +10,7 @@ use aptos_move_core_types::identifier::Identifier;
 use aptos_move_core_types::language_storage::{ModuleId, TypeTag};
 use aptos_move_core_types::u256::U256;
 use aptos_types::transaction::{EntryABI, EntryFunction as AptosEntryFunction, EntryFunctionABI, TransactionPayload};
+use aptos_vm::aptos_vm::FUZZER_SENDER;
 use libafl::corpus::{Corpus, CorpusId, HasCurrentCorpusId, HasTestcase, InMemoryCorpus, Testcase};
 use libafl::stages::StageId;
 use libafl::state::{
@@ -22,6 +23,7 @@ use libafl_bolts::serdeany::{NamedSerdeAnyMap, SerdeAnyMap};
 
 use crate::executor::aptos_custom_state::AptosCustomState;
 use crate::input::AptosFuzzerInput;
+use crate::mir::Chain;
 
 // AFL-style map size constant
 pub const MAP_SIZE: usize = 1 << 16;
@@ -72,6 +74,8 @@ pub struct AptosFuzzerState {
     pub abort_code_paths: HashSet<u64>,
     /// Execution path IDs that triggered shift overflow objectives
     pub shift_overflow_paths: HashSet<u64>,
+    /// MIR Chain loaded from file
+    chain: Option<Chain>,
 }
 
 #[derive(Clone)]
@@ -107,6 +111,7 @@ impl AptosFuzzerState {
             stop_requested: false,
             stage_stack: StageStack::default(),
             cumulative_coverage: vec![0u8; MAP_SIZE],
+            chain: None,
         };
 
         if let Some((module_id, code)) = module_bytes {
@@ -121,9 +126,76 @@ impl AptosFuzzerState {
         state
     }
 
-    /// Drain current corpus entries into a vector of inputs and clear the
-    /// corpus. Useful to re-insert seeds via fuzzer.add_input so
-    /// events/feedback are fired.
+    /// Load Chain from MIR JSON file and populate corpus
+    pub fn load_from_mir(mir_path: Option<PathBuf>, module_path: Option<PathBuf>) -> Self {
+        let module_bytes = Self::load_module_from_path(module_path.clone());
+        let mut state = Self {
+            aptos_state: AptosCustomState::new_default(),
+            rand: StdRand::new(),
+            executions: 0,
+            start_time: Duration::from_secs(0),
+            imported: 0,
+            corpus: InMemoryCorpus::new(),
+            solutions: InMemoryCorpus::new(),
+            current_execution_path: None,
+            current_execution_path_id: None,
+            execution_paths_by_input: HashMap::new(),
+            seen_execution_paths: HashSet::new(),
+            abort_code_paths: HashSet::new(),
+            shift_overflow_paths: HashSet::new(),
+            metadata: SerdeAnyMap::new(),
+            named_metadata: NamedSerdeAnyMap::new(),
+            last_found_time: Duration::from_secs(0),
+            last_report_time: None,
+            corpus_id: None,
+            stop_requested: false,
+            stage_stack: StageStack::default(),
+            cumulative_coverage: vec![0u8; MAP_SIZE],
+            chain: None,
+        };
+
+        if let Some((module_id, code)) = module_bytes {
+            state.aptos_state.deploy_module_bytes(module_id, code);
+        }
+
+        // Load MIR Chain and convert to inputs
+        if let Some(mir_path) = mir_path {
+            match Self::load_chain_from_mir(&mir_path) {
+                Ok(chain) => {
+                    println!("Loaded MIR chain with {} calls", chain.len());
+                    
+                    match chain.to_transaction_payload() {
+                        Ok(payloads) => {
+                            for payload in payloads {
+                                let input = AptosFuzzerInput::new(payload);
+                                let _ = state.corpus.add(Testcase::new(input));
+                            }
+                            println!("Added {} inputs to corpus from MIR", state.corpus.count());
+                        }
+                        Err(e) => {
+                            eprintln!("Failed to convert MIR chain to payloads: {}", e);
+                        }
+                    }
+                    state.chain = Some(chain);
+                }
+                Err(e) => {
+                    eprintln!("Failed to load MIR from {:?}: {}", mir_path, e);
+                }
+            }
+        }
+
+        state
+    }
+
+    fn load_chain_from_mir(path: &Path) -> Result<crate::mir::Chain, String> {
+        let content = fs::read_to_string(path)
+            .map_err(|e| format!("Failed to read MIR file: {}", e))?;
+        let chain: crate::mir::Chain = serde_json::from_str(&content)
+            .map_err(|e| format!("Failed to parse MIR JSON: {}", e))?;
+        Ok(chain)
+    }
+
+    /// Drain corpus entries for re-insertion via fuzzer.add_input
     pub fn take_initial_inputs(&mut self) -> Vec<AptosFuzzerInput> {
         let ids: Vec<_> = self.corpus().ids().collect();
         let mut inputs = Vec::with_capacity(ids.len());
@@ -153,6 +225,22 @@ impl AptosFuzzerState {
 
     pub fn cumulative_coverage_mut(&mut self) -> &mut [u8] {
         &mut self.cumulative_coverage
+    }
+
+    pub fn chain(&self) -> Option<&Chain> {
+        self.chain.as_ref()
+    }
+
+    pub fn chain_mut(&mut self) -> Option<&mut Chain> {
+        self.chain.as_mut()
+    }
+
+    pub fn set_chain(&mut self, chain: Chain) {
+        self.chain = Some(chain);
+    }
+
+    pub fn take_chain(&mut self) -> Option<Chain> {
+        self.chain.take()
     }
 
     pub fn take_solutions(&self) -> Vec<AptosFuzzerInput> {
@@ -504,7 +592,7 @@ impl AptosFuzzerState {
             TypeTag::U64 => bcs::to_bytes(&0u64).ok(),
             TypeTag::U128 => bcs::to_bytes(&0u128).ok(),
             TypeTag::U256 => bcs::to_bytes(&U256::from(0u8)).ok(),
-            TypeTag::Address => bcs::to_bytes(&AccountAddress::ZERO).ok(),
+            TypeTag::Address => bcs::to_bytes(&FUZZER_SENDER).ok(),
             TypeTag::Vector(inner) => match &**inner {
                 TypeTag::Bool => bcs::to_bytes::<Vec<bool>>(&Vec::new()).ok(),
                 TypeTag::U8 => bcs::to_bytes::<Vec<u8>>(&Vec::new()).ok(),

@@ -2,14 +2,13 @@ use std::marker::PhantomData;
 
 use aptos_move_core_types::vm_status::{StatusCode, VMStatus};
 use aptos_types::transaction::{ExecutionStatus, TransactionPayload, TransactionStatus};
-use aptos_vm::aptos_vm::ExecOutcomeKind;
+use aptos_vm::aptos_vm::{ExecOutcomeKind, FUZZER_SENDER};
 use aptos_vm::AptosVM;
 use libafl::executors::{Executor, ExitKind, HasObservers};
 use libafl::observers::map::{HitcountsMapObserver, OwnedMapObserver};
 use libafl::state::HasExecutions;
 use libafl_bolts::tuples::RefIndexable;
 use libafl_bolts::AsSliceMut;
-
 use crate::executor::aptos_custom_state::AptosCustomState;
 use crate::executor::custom_state_view::CustomStateView;
 use crate::executor::types::TransactionResult;
@@ -138,8 +137,9 @@ impl<EM, Z> Executor<EM, AptosFuzzerInput, AptosFuzzerState, Z> for AptosMoveExe
         input: &AptosFuzzerInput,
     ) -> Result<ExitKind, libafl::Error> {
         state.clear_current_execution_path();
+        
         let (result, outcome, pcs, shift_losses) =
-            self.execute_transaction(input.payload().clone(), state.aptos_state(), None);
+            self.execute_transaction(input.payload().clone(), state.aptos_state(), Some(FUZZER_SENDER));
 
         // Update execution counter (required by Executor trait contract)
         *state.executions_mut() += 1;

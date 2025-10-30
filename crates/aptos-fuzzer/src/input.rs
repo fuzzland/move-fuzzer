@@ -2,15 +2,13 @@ use aptos_types::transaction::TransactionPayload;
 use libafl::inputs::Input;
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, Hash, Eq, PartialEq, Deserialize, Serialize)]
+#[derive(Debug, Clone, Eq, PartialEq, Hash, Deserialize, Serialize)]
 pub struct AptosFuzzerInput {
     payload: TransactionPayload,
 }
 
 impl Input for AptosFuzzerInput {}
 
-// Currently we only support TransactionPayload::EntryFunction
-// TODO: add script
 impl AptosFuzzerInput {
     pub fn new(payload: TransactionPayload) -> Self {
         Self { payload }
