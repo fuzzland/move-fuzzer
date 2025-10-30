@@ -25,17 +25,13 @@ use utils::print_fuzzer_stats;
 #[derive(Debug, Parser)]
 #[command(author, version, about = "LibAFL-based fuzzer for Aptos Move modules")]
 struct Cli {
-    /// Path to an ABI file or directory to seed initial inputs
-    #[arg(long = "abi-path", value_name = "ABI_PATH")]
-    abi_path: Option<PathBuf>,
-
     /// Path to a compiled Move module to publish before fuzzing
     #[arg(long = "module-path", value_name = "MODULE_PATH")]
-    module_path: Option<PathBuf>,
+    module_path: PathBuf,
 
     /// Path to a MIR JSON file to initialize corpus
     #[arg(long = "mir-path", value_name = "MIR_PATH")]
-    mir_path: Option<PathBuf>,
+    mir_path: PathBuf,
 
     /// Timeout in seconds (0 = no timeout, run indefinitely)
     #[arg(long = "timeout", short = 't', default_value = "0")]
@@ -61,24 +57,8 @@ fn main() {
     let mut mgr = SimpleEventManager::new(mon);
     let scheduler = QueueScheduler::new();
 
-    // Initialize state either from MIR file or from ABI
-    let mut state = if let Some(mir_path) = cli.mir_path.clone() {
-        let module = cli
-            .module_path
-            .clone()
-            .unwrap_or_else(|| panic!("--module-path is required when using --mir-path."));
-        AptosFuzzerState::load_from_mir(Some(mir_path), Some(module))
-    } else {
-        let abi = cli
-            .abi_path
-            .clone()
-            .unwrap_or_else(|| panic!("--abi-path is required (no fallback)."));
-        let module = cli
-            .module_path
-            .clone()
-            .unwrap_or_else(|| panic!("--module-path is required (no fallback)."));
-        AptosFuzzerState::new(Some(abi), Some(module))
-    };
+    // Initialize state from MIR file
+    let mut state = AptosFuzzerState::load_from_mir(Some(cli.mir_path.clone()), Some(cli.module_path.clone()));
     
     let _ = feedback.init_state(&mut state);
     let mut fuzzer = StdFuzzer::new(scheduler, feedback, objective);

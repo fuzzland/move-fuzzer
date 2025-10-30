@@ -98,7 +98,7 @@ if [[ ! -d "build" ]]; then
     exit 1
 fi
 
-echo "[+] Step 3: Detecting artifact paths..."
+echo "[+] Step 3: Locating module bytecode and MIR file..."
 
 # Detect module name from build artifacts
 BUILD_DIR="$CONTRACT_DIR/build"
