@@ -9,6 +9,7 @@ PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 # Parse command line arguments
 CONTRACT_NAME="aptos-demo"
 TIMEOUT_DURATION=20
+DO_BUILD=true
 
 usage() {
     echo "Usage: $0 [OPTIONS]"
@@ -16,6 +17,7 @@ usage() {
     echo "  -c, --contract NAME    Contract name to fuzz (default: aptos-demo)"
     echo "                         Available: aptos-demo, fuzzing-demo"
     echo "  -t, --timeout SECONDS  Timeout duration for fuzzing (default: 20)"
+    echo "  -n, --no-build         Use prebuilt binary; do not build"
     echo "  -h, --help             Display this help message"
     echo ""
     echo "Examples:"
@@ -34,6 +36,10 @@ while [[ $# -gt 0 ]]; do
         -t|--timeout)
             TIMEOUT_DURATION="$2"
             shift 2
+            ;;
+        -n|--no-build)
+            DO_BUILD=false
+            shift 1
             ;;
         -h|--help)
             usage
@@ -69,14 +75,28 @@ if [[ ! -d "$CONTRACT_DIR" ]]; then
     exit 1
 fi
 
-echo "[+] Step 1: Building libafl-aptos binary..."
+echo "[+] Step 1: Preparing libafl-aptos binary..."
 cd "$PROJECT_ROOT"
-cargo build --release --bin libafl-aptos
-
-# Check if libafl-aptos binary exists
-if [[ ! -f "$LIBAFL_APTOS_BIN" ]]; then
-    echo "[-] Error: libafl-aptos binary not found after build: $LIBAFL_APTOS_BIN"
-    exit 1
+if [[ "$DO_BUILD" == true ]]; then
+    echo "[*] Building (release) libafl-aptos..."
+    cargo build --release --bin libafl-aptos
+    if [[ ! -f "$LIBAFL_APTOS_BIN" ]]; then
+        echo "[-] Error: libafl-aptos binary not found after build: $LIBAFL_APTOS_BIN"
+        exit 1
+    fi
+else
+    echo "[*] Skipping build; using prebuilt binary if available"
+    BIN_RELEASE="$PROJECT_ROOT/target/release/libafl-aptos"
+    BIN_DEBUG="$PROJECT_ROOT/target/debug/libafl-aptos"
+    if [[ -x "$BIN_RELEASE" ]]; then
+        LIBAFL_APTOS_BIN="$BIN_RELEASE"
+    elif [[ -x "$BIN_DEBUG" ]]; then
+        LIBAFL_APTOS_BIN="$BIN_DEBUG"
+    else
+        echo "[-] Error: prebuilt libafl-aptos binary not found."
+        echo "[*] Build it first, e.g.: cargo build --release --bin libafl-aptos"
+        exit 1
+    fi
 fi
 
 echo "[+] Step 2: Compiling $CONTRACT_NAME contract..."

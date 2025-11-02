@@ -18,5 +18,24 @@ AI generated code is allowed but please review it first. e.g. delete chatty comm
 
 # Run Demonstration
 
-```
+```sh
 ./scripts/setup_aptos.sh -c fuzzing-demo -t 30
+```
+
+## Skip rebuilds
+
+You can build the project in release mode by
+
+```sh
+cargo build --release --bin libafl-aptos
+```
+
+By default, the script builds the fuzzer binary.
+To reuse an existing build, pass `--no-build`.
+The `--no-build` option fist check in `target/release/libafl-aptos`,
+if it does not exist,
+it will use `target/debug/libafl-aptos`.
+
+```sh
+./scripts/setup_aptos.sh --no-build -c fuzzing-demo -t 30
+```
