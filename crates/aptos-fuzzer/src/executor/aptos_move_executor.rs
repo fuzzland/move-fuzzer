@@ -149,7 +149,8 @@ impl<EM, Z> Executor<EM, AptosFuzzerInput, AptosFuzzerState, Z> for AptosMoveExe
         
         // Execute each call in sequence
         for call in &input.calls {
-            let payload = TransactionPayload::EntryFunction(call.clone());
+            let entry_func = call.to_entry_function();
+            let payload = TransactionPayload::EntryFunction(entry_func);
             let (result, outcome, pcs, shift_losses) =
                 self.execute_transaction(payload, state.aptos_state(), Some(FUZZER_SENDER));
             
@@ -176,23 +177,13 @@ impl<EM, Z> Executor<EM, AptosFuzzerInput, AptosFuzzerState, Z> for AptosMoveExe
                 }
                 self.prev_loc = 0;
 
-                // Use first call for base ID
-                let base_id: u32 = {
-                    let call = &input.calls[0];
-                    let (module, function, _ty_args, _args) = call.clone().into_inner();
-                    let mut buf = Vec::new();
-                    buf.extend_from_slice(module.address().as_ref());
-                    buf.extend_from_slice(module.name().as_str().as_bytes());
-                    buf.extend_from_slice(function.as_str().as_bytes());
-                    Self::hash32(&buf)
-                };
-
                 self.total_instructions_executed += all_pcs.len() as u64;
 
                 {
                     let cumulative_map = state.cumulative_coverage_mut();
                     for &pc in &all_pcs {
-                        let cur_id = base_id ^ pc;
+                        // PCs are now global in the VM trace; use directly
+                        let cur_id = pc;
                         let idx = ((cur_id ^ self.prev_loc) as usize) & (MAP_SIZE - 1);
                         map[idx] = map[idx].saturating_add(1);
                         cumulative_map[idx] = cumulative_map[idx].max(1);

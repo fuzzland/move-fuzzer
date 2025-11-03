@@ -4,13 +4,12 @@ use std::collections::HashSet;
 use aptos_move_core_types::account_address::AccountAddress;
 use aptos_move_core_types::identifier::Identifier;
 use aptos_move_core_types::language_storage::ModuleId;
-use aptos_types::transaction::EntryFunction;
 use libafl::mutators::{MutationResult, Mutator};
 use libafl::state::HasRand;
 use libafl_bolts::rands::Rand;
 use libafl_bolts::Named;
 
-use crate::input::AptosFuzzerInput;
+use crate::input::{AptosFuzzerInput, FuncCall};
 use crate::state::AptosFuzzerState;
 
 #[derive(Default)]
@@ -23,63 +22,22 @@ impl AptosFuzzerMutator {
         }
         
         let call_idx = (state.rand_mut().next() as usize) % input.calls.len();
-        let entry_func = &mut input.calls[call_idx];
+        let func_call = &mut input.calls[call_idx];
         
-        let args = entry_func.args();
-        if args.is_empty() {
+        if func_call.bcs_args.is_empty() {
             return false;
         }
 
-        // Create new mutated arguments
-        let mut new_args = Vec::new();
         let mut mutated = false;
-
-        for arg_bytes in args.iter() {
-            let mut mutated_arg = arg_bytes.clone();
-            if Self::mutate_byte_vector(&mut mutated_arg, state) {
+        for arg_bytes in func_call.bcs_args.iter_mut() {
+            if Self::mutate_byte_vector(arg_bytes, state) {
                 mutated = true;
             }
-            new_args.push(mutated_arg);
-        }
-
-        if mutated {
-            // Reconstruct EntryFunction with mutated args
-            let (module, function, ty_args, _) = entry_func.clone().into_inner();
-            *entry_func = EntryFunction::new(module, function, ty_args, new_args);
         }
 
         mutated
     }
 
-    /// Mutate Script arguments using state's random source (pure random)
-    fn mutate_script_args(script: &mut Script, state: &mut AptosFuzzerState) -> bool {
-        let args = script.args();
-        if args.is_empty() {
-            return false;
-        }
-
-        // Create new mutated arguments
-        let mut new_args = Vec::new();
-        let mut mutated = false;
-
-        for arg in args.iter() {
-            let mut mutated_arg = arg.clone();
-            if Self::mutate_transaction_argument(&mut mutated_arg, state) {
-                mutated = true;
-            }
-            new_args.push(mutated_arg);
-        }
-
-        if mutated {
-            // Reconstruct Script with mutated args
-            let (code, ty_args, _) = script.clone().into_inner();
-            *script = Script::new(code, ty_args, new_args);
-        }
-
-        mutated
-    }
-
-    /// Mutate a byte vector using state's random source (pure random bytes)
     fn mutate_byte_vector(bytes: &mut Vec<u8>, state: &mut AptosFuzzerState) -> bool {
         let len = if bytes.is_empty() {
             // choose a small random length
@@ -108,13 +66,13 @@ impl AptosFuzzerMutator {
         let call_idx = (state.rand_mut().next() as usize) % chain.len();
         let call = &chain.calls[call_idx];
         
-        let entry_func = match Self::call_to_entry_function(call) {
-            Ok(ef) => ef,
+        let func_call = match Self::call_to_func_call(call) {
+            Ok(fc) => fc,
             Err(_) => return false,
         };
         
         let insert_pos = Self::find_insertion_position(&chain, &input.calls, call_idx);
-        input.calls.insert(insert_pos, entry_func);
+        input.calls.insert(insert_pos, func_call);
         
         true
     }
@@ -154,7 +112,7 @@ impl AptosFuzzerMutator {
         false
     }
     
-    fn call_to_entry_function(call: &crate::mir::Call) -> Result<EntryFunction, String> {
+    fn call_to_func_call(call: &crate::mir::Call) -> Result<FuncCall, String> {
         let addr_bytes = hex::decode(&call.module_addr)
             .map_err(|e| format!("Invalid module address: {}", e))?;
         if addr_bytes.len() != 32 {
@@ -172,10 +130,10 @@ impl AptosFuzzerMutator {
         let module_id = ModuleId::new(module_addr, module_name);
         let args = vec![vec![0u8; 8]; call.args.len()];
         
-        Ok(EntryFunction::new(module_id, function_name, vec![], args))
+        Ok(FuncCall::new(module_id, function_name, vec![], args))
     }
     
-    fn find_insertion_position(chain: &crate::mir::Chain, calls: &[EntryFunction], call_idx: usize) -> usize {
+    fn find_insertion_position(chain: &crate::mir::Chain, calls: &[FuncCall], call_idx: usize) -> usize {
         let call = &chain.calls[call_idx];
         
         let mut requires_structs = HashSet::new();
@@ -205,7 +163,7 @@ impl AptosFuzzerMutator {
     
     fn can_swap_safely(
         _chain: &crate::mir::Chain,
-        _calls: &[EntryFunction],
+        _calls: &[FuncCall],
         idx1: usize,
         idx2: usize,
     ) -> bool {

@@ -121,11 +121,11 @@ impl AptosFuzzerState {
                     
                     chain.sort_by_dependencies();
                     
-                    match chain.to_entry_functions() {
-                        Ok(functions) => {
+                    match chain.to_func_calls() {
+                        Ok(func_calls) => {
                             // Seed corpus with each MIR call as a single-call input
-                            for (idx, func) in functions.into_iter().enumerate() {
-                                let input = AptosFuzzerInput::new(func);
+                            for (idx, func_call) in func_calls.into_iter().enumerate() {
+                                let input = AptosFuzzerInput::new(func_call);
                                 let _ = state.corpus.add(Testcase::new(input));
                                 if (idx + 1) % 10 == 0 || idx + 1 == call_count {
                                     println!("  Added {}/{} individual calls to corpus", idx + 1, call_count);
@@ -134,7 +134,7 @@ impl AptosFuzzerState {
                             println!("Successfully seeded corpus with {} single-call inputs", state.corpus.count());
                         }
                         Err(e) => {
-                            eprintln!("Failed to convert MIR chain to entry functions: {}", e);
+                            eprintln!("Failed to convert MIR chain to func calls: {}", e);
                         }
                     }
                     state.chain = Some(chain);

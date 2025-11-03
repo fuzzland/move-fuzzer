@@ -721,25 +721,26 @@ pub fn resloc_simple(struct_name: &str, addr: AddrExpr) -> ResLoc {
 use aptos_move_core_types::account_address::AccountAddress;
 use aptos_move_core_types::identifier::Identifier;
 use aptos_move_core_types::language_storage::ModuleId;
-use aptos_types::transaction::EntryFunction;
 use aptos_vm::aptos_vm::FUZZER_SENDER;
 use bcs;
 
+use crate::input::FuncCall;
+
 impl Chain {
-    /// Convert Chain calls to Input calls
-    pub fn to_entry_functions(&self) -> Result<Vec<EntryFunction>, String> {
-        let mut functions = Vec::new();
+    /// Convert Chain calls to FuncCall inputs
+    pub fn to_func_calls(&self) -> Result<Vec<FuncCall>, String> {
+        let mut func_calls = Vec::new();
         
         for call in &self.calls {
-            let entry_fn = call_to_entry_function(call)?;
-            functions.push(entry_fn);
+            let func_call = call_to_func_call(call)?;
+            func_calls.push(func_call);
         }
         
-        Ok(functions)
+        Ok(func_calls)
     }
 }
 
-fn call_to_entry_function(call: &Call) -> Result<EntryFunction, String> {
+fn call_to_func_call(call: &Call) -> Result<FuncCall, String> {
     // Parse module address
     let addr_bytes = hex::decode(&call.module_addr)
         .map_err(|e| format!("Invalid module address: {}", e))?;
@@ -786,8 +787,7 @@ fn call_to_entry_function(call: &Call) -> Result<EntryFunction, String> {
         }
     }
     
-    let entry_fn = EntryFunction::new(module_id, function_name, ty_args, bcs_args);
-    Ok(entry_fn)
+    Ok(FuncCall::new(module_id, function_name, ty_args, bcs_args))
 }
 
 fn generate_value_for_type(ty: &TypeTagLite) -> Result<Vec<u8>, String> {
