@@ -118,10 +118,10 @@ impl AptosFuzzerState {
                 Ok(mut chain) => {
                     let call_count = chain.len();
                     println!("Loaded MIR chain with {} calls", call_count);
-                    
+
                     chain.sort_by_dependencies();
-                    
-                    match chain.to_func_calls() {
+
+                    match chain.to_calls() {
                         Ok(func_calls) => {
                             // Seed corpus with each MIR call as a single-call input
                             for (idx, func_call) in func_calls.into_iter().enumerate() {
@@ -131,7 +131,10 @@ impl AptosFuzzerState {
                                     println!("  Added {}/{} individual calls to corpus", idx + 1, call_count);
                                 }
                             }
-                            println!("Successfully seeded corpus with {} single-call inputs", state.corpus.count());
+                            println!(
+                                "Successfully seeded corpus with {} single-call inputs",
+                                state.corpus.count()
+                            );
                         }
                         Err(e) => {
                             eprintln!("Failed to convert MIR chain to func calls: {}", e);
@@ -149,10 +152,9 @@ impl AptosFuzzerState {
     }
 
     fn load_chain_from_mir(path: &Path) -> Result<crate::mir::Chain, String> {
-        let content = fs::read_to_string(path)
-            .map_err(|e| format!("Failed to read MIR file: {}", e))?;
-        let chain: crate::mir::Chain = serde_json::from_str(&content)
-            .map_err(|e| format!("Failed to parse MIR JSON: {}", e))?;
+        let content = fs::read_to_string(path).map_err(|e| format!("Failed to read MIR file: {}", e))?;
+        let chain: crate::mir::Chain =
+            serde_json::from_str(&content).map_err(|e| format!("Failed to parse MIR JSON: {}", e))?;
         Ok(chain)
     }
 

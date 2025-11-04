@@ -1,11 +1,13 @@
 // Suggested MIR Rust definitions for crates/aptos-fuzzer/src/mir/ir.rs
 // Designed to be a compact, expressive IR for Move interactions (MIR)
-// Focus: enums, structs, and traits representing types, values, resource locations,
-// facts (preconditions), effects (postconditions), calls, and chains.
-// Derive common traits for easy hashing/serialization and use in fuzzing pipelines.
+// Focus: enums, structs, and traits representing types, values, resource
+// locations, facts (preconditions), effects (postconditions), calls, and
+// chains. Derive common traits for easy hashing/serialization and use in
+// fuzzing pipelines.
+
+use std::collections::BTreeMap;
 
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
-use std::collections::BTreeMap;
 
 /// High-level type tags (mirrors Aptos' TypeTag but simplified)
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -55,8 +57,9 @@ impl<'de> Deserialize<'de> for TypeTagLite {
     where
         D: Deserializer<'de>,
     {
-        use serde::de::{self, MapAccess, Visitor};
         use std::fmt;
+
+        use serde::de::{self, MapAccess, Visitor};
 
         struct TypeTagVisitor;
 
@@ -121,7 +124,8 @@ pub struct StructTag {
     pub ty_args: Vec<TypeTagLite>,
 }
 
-/// A variable id used inside MIR programs. Variables carry a type tag when known.
+/// A variable id used inside MIR programs. Variables carry a type tag when
+/// known.
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct Var {
     pub id: u32,
@@ -145,25 +149,18 @@ pub enum AddrExpr {
     Literal(String),
     /// An address coming from a Var (e.g., signer var)
     Var(Var),
-    /// Object address computed as object::create_object_address(owner, seed_expr)
-    ObjectAddr {
-        owner: Box<AddrExpr>,
-        seed: SeedExpr,
-    },
+    /// Object address computed as object::create_object_address(owner,
+    /// seed_expr)
+    ObjectAddr { owner: Box<AddrExpr>, seed: SeedExpr },
     /// Derived from a call result (call id + result var)
     FromCall { call_id: usize, result: Var },
-    /// Address read from a resource field at runtime (e.g., seller from Listing)
-    /// This allows fuzzer to track data dependencies across resources
-    FromField {
-        res: Box<ResLoc>,
-        field_path: String,
-    },
+    /// Address read from a resource field at runtime (e.g., seller from
+    /// Listing) This allows fuzzer to track data dependencies across
+    /// resources
+    FromField { res: Box<ResLoc>, field_path: String },
     /// Named object address computed deterministically from creator and seed
     /// e.g., object::create_named_object(creator, seed)
-    NamedObjectAddr {
-        creator: Box<AddrExpr>,
-        seed: SeedExpr,
-    },
+    NamedObjectAddr { creator: Box<AddrExpr>, seed: SeedExpr },
 }
 
 /// Seed expressions for object addresses (small domain expressions)
@@ -179,8 +176,9 @@ pub enum SeedExpr {
     Bytes(Vec<u8>),
     /// String converted to bytes seed
     Str(String),
-    /// Composite seed combining multiple components (e.g., issuer_addr || holder_addr)
-    /// Useful for paired object addresses like (issuer, holder) -> holding_address
+    /// Composite seed combining multiple components (e.g., issuer_addr ||
+    /// holder_addr) Useful for paired object addresses like (issuer,
+    /// holder) -> holding_address
     Composite(Vec<SeedExpr>),
     /// Seed from a function call result
     FromCall {
@@ -195,10 +193,7 @@ pub enum SeedExpr {
     /// BCS serialization of an expression
     BcsToBytes(Box<SeedExpr>),
     /// String formatting operation (e.g., format!("{}_{}", addr, counter))
-    Format {
-        template: String,
-        args: Vec<SeedExpr>,
-    },
+    Format { template: String, args: Vec<SeedExpr> },
     /// Address literal (for use in seed generation)
     Address(String),
 }
@@ -206,16 +201,18 @@ pub enum SeedExpr {
 /// Resource locator — identifies a resource type and the address where it lives
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct ResLoc {
-    pub struct_name: String,  // Reference to struct in struct_defs, e.g. "@TodoList"
+    pub struct_name: String, // Reference to struct in struct_defs, e.g. "@TodoList"
     pub addr: AddrExpr,
 }
 
-/// Facts: preconditions the fuzzer can reason about (Exists, NotExists, bounds, field equality...)
+/// Facts: preconditions the fuzzer can reason about (Exists, NotExists, bounds,
+/// field equality...)
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum Fact {
     Exists(ResLoc),
     NotExists(ResLoc),
-    /// A weak fact: length at field_path is >= n. field_path is a simple dot-separated string.
+    /// A weak fact: length at field_path is >= n. field_path is a simple
+    /// dot-separated string.
     LengthAtLeast {
         res: ResLoc,
         field_path: String,
@@ -300,7 +297,8 @@ pub enum Effect {
     },
 }
 
-/// The kind of argument passed to a call. Can be a literal, a var reference, or a ResLoc.
+/// The kind of argument passed to a call. Can be a literal, a var reference, or
+/// a ResLoc.
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum Arg {
     Lit(Literal),
@@ -322,10 +320,12 @@ pub struct Call {
     /// Type args (concrete or TypeVar placeholders)
     pub ty_args: Vec<TypeTagLite>,
 
-    /// Arguments (in order). These are either Vars (which themselves may be bound to AddrExpr) or literals.
+    /// Arguments (in order). These are either Vars (which themselves may be
+    /// bound to AddrExpr) or literals.
     pub args: Vec<Arg>,
 
-    /// Resources listed in `acquires` in the function signature (struct name references)
+    /// Resources listed in `acquires` in the function signature (struct name
+    /// references)
     pub acquires: Vec<String>,
 
     /// Static + inferred requires
@@ -382,7 +382,8 @@ pub struct StructDef {
 }
 
 /// A Chain (program) — sequence of Calls with an optional final return var.
-/// Chains are the unit the fuzzer will mutate, insert provider calls into, and execute.
+/// Chains are the unit the fuzzer will mutate, insert provider calls into, and
+/// execute.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Chain {
     pub calls: Vec<Call>,
@@ -415,54 +416,56 @@ impl Chain {
     pub fn is_empty(&self) -> bool {
         self.calls.is_empty()
     }
-    
+
     pub fn sort_by_dependencies(&mut self) {
         use std::collections::{HashMap, HashSet};
-        
+
         let mut creates: HashMap<usize, HashSet<String>> = HashMap::new();
         let mut requires: HashMap<usize, HashSet<String>> = HashMap::new();
-        
+
         for (idx, call) in self.calls.iter().enumerate() {
             for effect in &call.effects {
                 if let Effect::Creates(res_loc) = effect {
                     creates.entry(idx).or_default().insert(res_loc.struct_name.clone());
                 }
             }
-            
+
             for fact in &call.requires {
                 if let Fact::Exists(res_loc) = fact {
                     requires.entry(idx).or_default().insert(res_loc.struct_name.clone());
                 }
             }
         }
-        
+
         let mut sorted_indices = Vec::new();
         let mut satisfied_structs: HashSet<String> = HashSet::new();
         let mut remaining: HashSet<usize> = (0..self.calls.len()).collect();
-        
+
         while !remaining.is_empty() {
             let mut made_progress = false;
-            
-            let candidates: Vec<usize> = remaining.iter()
+
+            let candidates: Vec<usize> = remaining
+                .iter()
                 .filter(|&&idx| {
-                    requires.get(&idx)
+                    requires
+                        .get(&idx)
                         .map(|reqs| reqs.iter().all(|s| satisfied_structs.contains(s)))
                         .unwrap_or(true)
                 })
                 .copied()
                 .collect();
-            
+
             for idx in candidates {
                 sorted_indices.push(idx);
                 remaining.remove(&idx);
-                
+
                 if let Some(created) = creates.get(&idx) {
                     satisfied_structs.extend(created.iter().cloned());
                 }
-                
+
                 made_progress = true;
             }
-            
+
             if !made_progress {
                 let mut rest: Vec<_> = remaining.iter().copied().collect();
                 rest.sort();
@@ -470,31 +473,35 @@ impl Chain {
                 break;
             }
         }
-        
+
         let mut new_calls = Vec::with_capacity(self.calls.len());
         for idx in sorted_indices {
             new_calls.push(self.calls[idx].clone());
         }
         self.calls = new_calls;
     }
-    
+
     pub fn calls_creating_struct(&self, struct_name: &str) -> Vec<usize> {
-        self.calls.iter().enumerate()
+        self.calls
+            .iter()
+            .enumerate()
             .filter(|(_, call)| {
-                call.effects.iter().any(|eff| {
-                    matches!(eff, Effect::Creates(res) if res.struct_name == struct_name)
-                })
+                call.effects
+                    .iter()
+                    .any(|eff| matches!(eff, Effect::Creates(res) if res.struct_name == struct_name))
             })
             .map(|(idx, _)| idx)
             .collect()
     }
-    
+
     pub fn calls_requiring_struct(&self, struct_name: &str) -> Vec<usize> {
-        self.calls.iter().enumerate()
+        self.calls
+            .iter()
+            .enumerate()
             .filter(|(_, call)| {
-                call.requires.iter().any(|fact| {
-                    matches!(fact, Fact::Exists(res) if res.struct_name == struct_name)
-                })
+                call.requires
+                    .iter()
+                    .any(|fact| matches!(fact, Fact::Exists(res) if res.struct_name == struct_name))
             })
             .map(|(idx, _)| idx)
             .collect()
@@ -503,10 +510,12 @@ impl Chain {
 
 // --------------------------- Traits & Helpers -------------------------------
 
-/// A trait to unify address expressions with concrete addresses or other expressions.
-/// Implementations can do simple structural unification or heuristic binding.
+/// A trait to unify address expressions with concrete addresses or other
+/// expressions. Implementations can do simple structural unification or
+/// heuristic binding.
 pub trait UnifyAddr {
-    /// Try to unify `self` with `other` and return a (possibly partial) substitution
+    /// Try to unify `self` with `other` and return a (possibly partial)
+    /// substitution
     fn unify(&self, other: &AddrExpr) -> Option<BTreeMap<String, AddrExpr>>;
 }
 
@@ -568,16 +577,7 @@ impl UnifyAddr for AddrExpr {
             }
 
             // ObjectAddr <> ObjectAddr: unify owner and seed
-            (
-                AddrExpr::ObjectAddr {
-                    owner: o1,
-                    seed: s1,
-                },
-                AddrExpr::ObjectAddr {
-                    owner: o2,
-                    seed: s2,
-                },
-            ) => {
+            (AddrExpr::ObjectAddr { owner: o1, seed: s1 }, AddrExpr::ObjectAddr { owner: o2, seed: s2 }) => {
                 if let Some(m1) = o1.unify(o2) {
                     // merge maps
                     for (k, v) in m1.into_iter() {
@@ -622,7 +622,8 @@ impl UnifyAddr for AddrExpr {
     }
 }
 
-// Utilities to convert a SeedExpr into a trivial AddrExpr when recording seed bindings
+// Utilities to convert a SeedExpr into a trivial AddrExpr when recording seed
+// bindings
 impl AddrExpr {
     fn from_seed(s: SeedExpr) -> AddrExpr {
         match s {
@@ -649,57 +650,27 @@ impl std::fmt::Display for Fact {
             Fact::LengthAtLeast { res, field_path, n } => {
                 write!(f, "Len({}.{}) >= {}", res.struct_name, field_path, n)
             }
-            Fact::FieldEq {
-                res,
-                field_path,
-                value,
-            } => write!(
-                f,
-                "FieldEq({}.{} == {:?})",
-                res.struct_name, field_path, value
-            ),
+            Fact::FieldEq { res, field_path, value } => {
+                write!(f, "FieldEq({}.{} == {:?})", res.struct_name, field_path, value)
+            }
             Fact::FieldExists { res, field_path } => {
                 write!(f, "FieldExists({}.{})", res.struct_name, field_path)
             }
             Fact::FieldNotExists { res, field_path } => {
                 write!(f, "FieldNotExists({}.{})", res.struct_name, field_path)
             }
-            Fact::VectorContains {
-                res,
-                field_path,
-                value,
-            } => write!(
-                f,
-                "VectorContains({}.{}, {:?})",
-                res.struct_name, field_path, value
-            ),
-            Fact::VectorNotContains {
-                res,
-                field_path,
-                value,
-            } => write!(
-                f,
-                "VectorNotContains({}.{}, {:?})",
-                res.struct_name, field_path, value
-            ),
-            Fact::FieldGte {
-                res,
-                field_path,
-                value,
-            } => write!(
-                f,
-                "FieldGte({}.{} >= {})",
-                res.struct_name, field_path, value
-            ),
-            Fact::FieldGt {
-                res,
-                field_path,
-                value,
-            } => write!(
-                f,
-                "FieldGt({}.{} > {})",
-                res.struct_name, field_path, value
-            ),
+            Fact::VectorContains { res, field_path, value } => {
+                write!(f, "VectorContains({}.{}, {:?})", res.struct_name, field_path, value)
+            }
+            Fact::VectorNotContains { res, field_path, value } => {
+                write!(f, "VectorNotContains({}.{}, {:?})", res.struct_name, field_path, value)
+            }
+            Fact::FieldGte { res, field_path, value } => {
+                write!(f, "FieldGte({}.{} >= {})", res.struct_name, field_path, value)
+            }
+            Fact::FieldGt { res, field_path, value } => {
+                write!(f, "FieldGt({}.{} > {})", res.struct_name, field_path, value)
+            }
             Fact::And(a, b) => write!(f, "({} AND {})", a, b),
             Fact::Or(a, b) => write!(f, "({} OR {})", a, b),
         }
@@ -716,78 +687,76 @@ pub fn resloc_simple(struct_name: &str, addr: AddrExpr) -> ResLoc {
     }
 }
 
-// -------------------- Chain to Aptos Transaction Conversion --------------------
+// -------------------- Chain to Aptos Transaction Conversion
+// --------------------
 
+use aptos_dynamic_transaction_composer::CallArgument;
 use aptos_move_core_types::account_address::AccountAddress;
 use aptos_move_core_types::identifier::Identifier;
 use aptos_move_core_types::language_storage::ModuleId;
 use aptos_vm::aptos_vm::FUZZER_SENDER;
 use bcs;
 
-use crate::input::FuncCall;
+use crate::input::Call as FuzzCall;
 
 impl Chain {
-    /// Convert Chain calls to FuncCall inputs
-    pub fn to_func_calls(&self) -> Result<Vec<FuncCall>, String> {
-        let mut func_calls = Vec::new();
-        
+    /// Convert Chain calls to fuzzer Call inputs
+    pub fn to_calls(&self) -> Result<Vec<FuzzCall>, String> {
+        let mut out = Vec::new();
         for call in &self.calls {
-            let func_call = call_to_func_call(call)?;
-            func_calls.push(func_call);
+            let c = call_to_fuzz_call(call)?;
+            out.push(c);
         }
-        
-        Ok(func_calls)
+        Ok(out)
     }
 }
 
-fn call_to_func_call(call: &Call) -> Result<FuncCall, String> {
+fn call_to_fuzz_call(call: &Call) -> Result<FuzzCall, String> {
     // Parse module address
-    let addr_bytes = hex::decode(&call.module_addr)
-        .map_err(|e| format!("Invalid module address: {}", e))?;
+    let addr_bytes = hex::decode(&call.module_addr).map_err(|e| format!("Invalid module address: {}", e))?;
     if addr_bytes.len() != 32 {
         return Err(format!("Module address must be 32 bytes, got {}", addr_bytes.len()));
     }
     let mut addr_array = [0u8; 32];
     addr_array.copy_from_slice(&addr_bytes);
     let module_addr = AccountAddress::new(addr_array);
-    
+
     // Parse module and function names
-    let module_name = Identifier::new(call.module.as_str())
-        .map_err(|e| format!("Invalid module name: {}", e))?;
-    let function_name = Identifier::new(call.function.as_str())
-        .map_err(|e| format!("Invalid function name: {}", e))?;
-    
+    let module_name = Identifier::new(call.module.as_str()).map_err(|e| format!("Invalid module name: {}", e))?;
+    let function_name = Identifier::new(call.function.as_str()).map_err(|e| format!("Invalid function name: {}", e))?;
+
     let module_id = ModuleId::new(module_addr, module_name);
-    
+
     let ty_args = vec![];
-    
-    // Convert args to BCS-encoded values (skip Signer type as it's provided by sender)
-    let mut bcs_args = Vec::new();
+
+    // Convert args to CallArgument (Signer/Raw only for now)
+    let mut args: Vec<CallArgument> = Vec::new();
     for arg in &call.args {
         match arg {
             Arg::Var(var) => {
                 if let Some(ref ty) = var.ty {
-                    // Skip Signer type - it's automatically provided by the transaction sender
                     if matches!(ty, TypeTagLite::Signer) {
-                        continue;
+                        // Use signer index 0 by default
+                        args.push(CallArgument::Signer(0));
+                    } else {
+                        let bytes = generate_value_for_type(ty)?;
+                        args.push(CallArgument::Raw(bytes));
                     }
-                    let bytes = generate_value_for_type(ty)?;
-                    bcs_args.push(bytes);
                 } else {
                     return Err(format!("Var {} has no type information", var.id));
                 }
             }
             Arg::Lit(lit) => {
                 let bytes = literal_to_bcs(lit)?;
-                bcs_args.push(bytes);
+                args.push(CallArgument::Raw(bytes));
             }
             Arg::Res(_res) => {
                 return Err("Resource arguments not yet supported".to_string());
             }
         }
     }
-    
-    Ok(FuncCall::new(module_id, function_name, ty_args, bcs_args))
+
+    Ok(FuzzCall::new(module_id, function_name, ty_args, args))
 }
 
 fn generate_value_for_type(ty: &TypeTagLite) -> Result<Vec<u8>, String> {
@@ -811,8 +780,7 @@ fn literal_to_bcs(lit: &Literal) -> Result<Vec<u8>, String> {
         Literal::Bool(b) => bcs::to_bytes(b).map_err(|e| e.to_string()),
         Literal::U64(n) => bcs::to_bytes(n).map_err(|e| e.to_string()),
         Literal::Address(s) => {
-            let addr_bytes = hex::decode(s)
-                .map_err(|e| format!("Invalid address: {}", e))?;
+            let addr_bytes = hex::decode(s).map_err(|e| format!("Invalid address: {}", e))?;
             if addr_bytes.len() != 32 {
                 return Err(format!("Address must be 32 bytes"));
             }

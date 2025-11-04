@@ -1,6 +1,9 @@
 use std::marker::PhantomData;
 
+use aptos_dynamic_transaction_composer::TransactionComposer;
+use aptos_move_core_types::language_storage::TypeTag;
 use aptos_move_core_types::vm_status::{StatusCode, VMStatus};
+use aptos_move_vm_runtime::ModuleStorage;
 use aptos_types::transaction::{ExecutionStatus, TransactionPayload, TransactionStatus};
 use aptos_vm::aptos_vm::{ExecOutcomeKind, FUZZER_SENDER};
 use aptos_vm::AptosVM;
@@ -9,6 +12,7 @@ use libafl::observers::map::{HitcountsMapObserver, OwnedMapObserver};
 use libafl::state::HasExecutions;
 use libafl_bolts::tuples::RefIndexable;
 use libafl_bolts::AsSliceMut;
+
 use crate::executor::aptos_custom_state::AptosCustomState;
 use crate::executor::custom_state_view::CustomStateView;
 use crate::executor::types::TransactionResult;
@@ -120,6 +124,50 @@ impl<EM, Z> AptosMoveExecutor<EM, Z> {
             ),
         }
     }
+
+    fn calls_to_script_payload(
+        &self,
+        input: &AptosFuzzerInput,
+        state: &AptosCustomState,
+    ) -> Option<TransactionPayload> {
+        if input.calls.is_empty() {
+            return None;
+        }
+
+        // Build the script using TransactionComposer
+        let mut composer = TransactionComposer::single_signer();
+
+        // Load module bytes from state into composer
+        for call in &input.calls {
+            if let Ok(Some(bytes)) = state.unmetered_get_module_bytes(call.module_id.address(), call.module_id.name()) {
+                let _ = composer.store_module(bytes.to_vec());
+            }
+        }
+
+        // Add each batched call with ty args and arguments
+        for call in &input.calls {
+            let module_str = call.module_id.to_string();
+            let function_str = call.function_name.to_string();
+            let ty_args: Vec<String> = call.ty_args.iter().map(TypeTag::to_canonical_string).collect();
+            let args = call.args.clone();
+            if composer
+                .add_batched_call(module_str, function_str, ty_args, args)
+                .is_err()
+            {
+                return None;
+            }
+        }
+
+        let script_bytes = match composer.generate_batched_calls(true) {
+            Ok(b) => b,
+            Err(_) => return None,
+        };
+        let script = match bcs::from_bytes::<aptos_types::transaction::Script>(&script_bytes) {
+            Ok(s) => s,
+            Err(_) => return None,
+        };
+        Some(TransactionPayload::Script(script))
+    }
 }
 
 impl<EM, Z> Default for AptosMoveExecutor<EM, Z> {
@@ -137,33 +185,28 @@ impl<EM, Z> Executor<EM, AptosFuzzerInput, AptosFuzzerState, Z> for AptosMoveExe
         input: &AptosFuzzerInput,
     ) -> Result<ExitKind, libafl::Error> {
         state.clear_current_execution_path();
-        
+
         if input.calls.is_empty() {
             return Ok(ExitKind::Ok);
         }
-        
+
         let mut all_pcs = Vec::new();
         let mut all_shift_losses = Vec::new();
         let mut final_outcome = ExecOutcomeKind::Ok;
         let mut final_result = None;
-        
-        // Execute each call in sequence
-        for call in &input.calls {
-            let entry_func = call.to_entry_function();
-            let payload = TransactionPayload::EntryFunction(entry_func);
-            let (result, outcome, pcs, shift_losses) =
-                self.execute_transaction(payload, state.aptos_state(), Some(FUZZER_SENDER));
-            
-            all_pcs.extend(pcs);
-            all_shift_losses.extend(shift_losses);
-            final_outcome = outcome;
-            final_result = Some(result);
-            
-            // Stop execution on error
-            if final_result.as_ref().unwrap().is_err() {
-                break;
-            }
-        }
+
+        // Build a single Script payload from all calls and execute once
+        let payload = match self.calls_to_script_payload(input, state.aptos_state()) {
+            Some(p) => p,
+            None => return Ok(ExitKind::Ok),
+        };
+
+        let (result, outcome, pcs, shift_losses) =
+            self.execute_transaction(payload, state.aptos_state(), Some(FUZZER_SENDER));
+        all_pcs.extend(pcs);
+        all_shift_losses.extend(shift_losses);
+        final_outcome = outcome;
+        final_result = Some(result);
 
         // Update execution counter
         *state.executions_mut() += 1;

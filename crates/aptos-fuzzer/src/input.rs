@@ -1,76 +1,53 @@
+use aptos_dynamic_transaction_composer::CallArgument;
 use aptos_move_core_types::identifier::Identifier;
 use aptos_move_core_types::language_storage::{ModuleId, TypeTag};
-use aptos_types::transaction::EntryFunction;
 use libafl::inputs::Input;
 use serde::{Deserialize, Serialize};
 
-/// Represents a single function call with all necessary parameters.
+/// Represents a single function call with batched-call compatible arguments.
 #[derive(Debug, Clone, Eq, PartialEq, Hash, Deserialize, Serialize)]
-pub struct FuncCall {
+pub struct Call {
     pub module_id: ModuleId,
     pub function_name: Identifier,
     pub ty_args: Vec<TypeTag>,
-    pub bcs_args: Vec<Vec<u8>>,
+    pub args: Vec<CallArgument>,
 }
 
-impl FuncCall {
-    pub fn new(
-        module_id: ModuleId,
-        function_name: Identifier,
-        ty_args: Vec<TypeTag>,
-        bcs_args: Vec<Vec<u8>>,
-    ) -> Self {
+impl Call {
+    pub fn new(module_id: ModuleId, function_name: Identifier, ty_args: Vec<TypeTag>, args: Vec<CallArgument>) -> Self {
         Self {
             module_id,
             function_name,
             ty_args,
-            bcs_args,
+            args,
         }
-    }
-    
-    /// Convert to EntryFunction for execution
-    pub fn to_entry_function(&self) -> EntryFunction {
-        EntryFunction::new(
-            self.module_id.clone(),
-            self.function_name.clone(),
-            self.ty_args.clone(),
-            self.bcs_args.clone(),
-        )
     }
 }
 
-
 #[derive(Debug, Clone, Eq, PartialEq, Hash, Deserialize, Serialize)]
 pub struct AptosFuzzerInput {
-    pub calls: Vec<FuncCall>,
+    pub calls: Vec<Call>,
 }
 
 impl Input for AptosFuzzerInput {}
 
 impl AptosFuzzerInput {
-    pub fn new(call: FuncCall) -> Self {
+    pub fn new(call: Call) -> Self {
         Self { calls: vec![call] }
     }
-    
-    pub fn from_calls(calls: Vec<FuncCall>) -> Self {
+
+    pub fn from_calls(calls: Vec<Call>) -> Self {
         Self { calls }
     }
-    
-    pub fn from_entry_function(entry_func: EntryFunction) -> Self {
-        let (module_id, function_name, ty_args, bcs_args) = entry_func.into_inner();
-        Self {
-            calls: vec![FuncCall::new(module_id, function_name, ty_args, bcs_args)],
-        }
-    }
-    
-    pub fn push(&mut self, call: FuncCall) {
+
+    pub fn push(&mut self, call: Call) {
         self.calls.push(call);
     }
-    
+
     pub fn len(&self) -> usize {
         self.calls.len()
     }
-    
+
     pub fn is_empty(&self) -> bool {
         self.calls.is_empty()
     }

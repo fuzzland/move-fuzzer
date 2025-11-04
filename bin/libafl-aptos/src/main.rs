@@ -6,8 +6,7 @@ use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 use aptos_fuzzer::{
-    AbortCodeObjective, AptosFuzzerMutator, AptosFuzzerState, AptosMoveExecutor,
-    ShiftOverflowObjective,
+    AbortCodeObjective, AptosFuzzerMutator, AptosFuzzerState, AptosMoveExecutor, ShiftOverflowObjective,
 };
 use clap::Parser;
 use libafl::corpus::Corpus;
@@ -59,7 +58,7 @@ fn main() {
 
     // Initialize state from MIR file
     let mut state = AptosFuzzerState::load_from_mir(Some(cli.mir_path.clone()), Some(cli.module_path.clone()));
-    
+
     let _ = feedback.init_state(&mut state);
     let mut fuzzer = StdFuzzer::new(scheduler, feedback, objective);
 
