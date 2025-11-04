@@ -146,14 +146,15 @@ impl<EM, Z> AptosMoveExecutor<EM, Z> {
 
         // Add each batched call with ty args and arguments
         for call in &input.calls {
-            let module_str = call.module_id.to_string();
+            let module_str = format!(
+                "{}::{}",
+                call.module_id.address().to_standard_string(),
+                call.module_id.name()
+            );
             let function_str = call.function_name.to_string();
             let ty_args: Vec<String> = call.ty_args.iter().map(TypeTag::to_canonical_string).collect();
             let args = call.args.clone();
-            if composer
-                .add_batched_call(module_str, function_str, ty_args, args)
-                .is_err()
-            {
+            if composer.add_batched_call(module_str, function_str, ty_args, args).is_err() {
                 return None;
             }
         }
