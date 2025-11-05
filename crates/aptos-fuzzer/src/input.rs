@@ -42,15 +42,15 @@ impl AptosFuzzerInput {
     pub fn new(call: Call) -> Self {
         Self { calls: vec![call] }
     }
-
+    
     pub fn from_calls(calls: Vec<Call>) -> Self {
         Self { calls }
     }
-
+    
     pub fn push(&mut self, call: Call) {
         self.calls.push(call);
     }
-
+    
     pub fn len(&self) -> usize { self.calls.len() }
     pub fn is_empty(&self) -> bool { self.calls.is_empty() }
 
