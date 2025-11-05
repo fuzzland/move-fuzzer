@@ -76,7 +76,7 @@ impl<EM, Z> AptosMoveExecutor<EM, Z> {
     ) -> (
         core::result::Result<TransactionResult, VMStatus>,
         ExecOutcomeKind,
-        Vec<u32>,
+        Vec<u64>,
         Vec<bool>,
     ) {
         match &transaction {
@@ -313,6 +313,7 @@ impl<EM, Z> Executor<EM, AptosFuzzerInput, AptosFuzzerState, Z> for AptosMoveExe
     ) -> Result<ExitKind, libafl::Error> {
         state.clear_current_execution_path();
         if input.calls.is_empty() { return Ok(ExitKind::Ok); }
+        // PCs from VM are packed u64 per step: upper 32 bits = function hash, lower 32 bits = local pc (u16 widened)
         let mut all_pcs = Vec::new();
         let mut all_shift_losses = Vec::new();
         let mut final_outcome = ExecOutcomeKind::Ok;
@@ -330,18 +331,27 @@ impl<EM, Z> Executor<EM, AptosFuzzerInput, AptosFuzzerState, Z> for AptosMoveExe
                 let map = self.observers.0.as_slice_mut();
                 for byte in map.iter_mut() { *byte = 0; }
                 self.prev_loc = 0;
+                // Convert packed u64 to hashed u32 tokens for coverage and path recording
                 self.total_instructions_executed += all_pcs.len() as u64;
+                let mut tokens: Vec<u32> = Vec::with_capacity(all_pcs.len());
                 {
                     let cumulative_map = state.cumulative_coverage_mut();
-                    for &pc in &all_pcs {
-                        let cur_id = pc;
-                        let idx = ((cur_id ^ self.prev_loc) as usize) & (MAP_SIZE - 1);
+                    for &packed in &all_pcs {
+                        let fn_hash = (packed >> 32) as u32;
+                        let pc32 = (packed & 0xFFFF_FFFF) as u32;
+                        // Build 8-byte buffer = fn_hash || pc32 and hash to u32
+                        let mut buf = [0u8; 8];
+                        buf[..4].copy_from_slice(&fn_hash.to_le_bytes());
+                        buf[4..].copy_from_slice(&pc32.to_le_bytes());
+                        let token = Self::hash32(&buf);
+                        tokens.push(token);
+                        let idx = ((token ^ self.prev_loc) as usize) & (MAP_SIZE - 1);
                         map[idx] = map[idx].saturating_add(1);
                         cumulative_map[idx] = cumulative_map[idx].max(1);
-                        self.prev_loc = cur_id >> 1;
+                        self.prev_loc = token >> 1;
                     }
                 }
-                state.set_current_execution_path(all_pcs);
+                state.set_current_execution_path(tokens);
                 let cause_loss = all_shift_losses.into_iter().any(|b| b);
                 self.observers.1 .1 .0.set_cause_loss(cause_loss);
                 if let TransactionStatus::Keep(ExecutionStatus::MoveAbort { location: _, code, .. }) = &result.status {
@@ -355,7 +365,17 @@ impl<EM, Z> Executor<EM, AptosFuzzerInput, AptosFuzzerState, Z> for AptosMoveExe
                 for byte in map.iter_mut() { *byte = 0; }
                 self.prev_loc = 0;
                 self.observers.1 .1 .0.set_cause_loss(false);
-                state.set_current_execution_path(all_pcs);
+                // On error, still record hashed tokens for current path (may be empty)
+                let mut tokens: Vec<u32> = Vec::with_capacity(all_pcs.len());
+                for &packed in &all_pcs {
+                    let fn_hash = (packed >> 32) as u32;
+                    let pc32 = (packed & 0xFFFF_FFFF) as u32;
+                    let mut buf = [0u8; 8];
+                    buf[..4].copy_from_slice(&fn_hash.to_le_bytes());
+                    buf[4..].copy_from_slice(&pc32.to_le_bytes());
+                    tokens.push(Self::hash32(&buf));
+                }
+                state.set_current_execution_path(tokens);
                 if let VMStatus::MoveAbort(ref _loc, code) = vm_status { self.observers.1 .0.set_last(Some(code)); } else { self.observers.1 .0.set_last(None); }
                 let exit_kind = match final_outcome {
                     ExecOutcomeKind::Ok => ExitKind::Ok,

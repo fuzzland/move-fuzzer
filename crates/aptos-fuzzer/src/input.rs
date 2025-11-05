@@ -105,9 +105,21 @@ impl AptosFuzzerInput {
                             },
                             // other value types: if Raw empty, fill minimal BCS
                             (Some(t), CallArgument::Raw(bytes)) => {
-                                if !bytes.is_empty() {
-                                    CallArgument::Raw(bytes)
-                                } else if let Some(minb) = minimal_bcs_for_token_with_storage(storage, &cm, t, &call.ty_args) { CallArgument::Raw(minb) } else { CallArgument::Raw(vec![]) }
+                                // For value types, if provided Raw length mismatches expected fixed-size,
+                                // replace with minimal correct BCS; otherwise keep.
+                                if let Some(tag) = resolve_token_to_typetag_with_storage(storage, &cm, t, &call.ty_args) {
+                                    if let Some(expected) = expected_fixed_len_bytes(&tag) {
+                                        if bytes.len() != expected {
+                                            CallArgument::Raw(minimal_bcs_for_typetag(&tag).unwrap_or_else(|| vec![]))
+                                        } else {
+                                            if !bytes.is_empty() { CallArgument::Raw(bytes) } else if let Some(minb) = minimal_bcs_for_token_with_storage(storage, &cm, t, &call.ty_args) { CallArgument::Raw(minb) } else { CallArgument::Raw(vec![]) }
+                                        }
+                                    } else {
+                                        if !bytes.is_empty() { CallArgument::Raw(bytes) } else if let Some(minb) = minimal_bcs_for_token_with_storage(storage, &cm, t, &call.ty_args) { CallArgument::Raw(minb) } else { CallArgument::Raw(vec![]) }
+                                    }
+                                } else {
+                                    if !bytes.is_empty() { CallArgument::Raw(bytes) } else if let Some(minb) = minimal_bcs_for_token_with_storage(storage, &cm, t, &call.ty_args) { CallArgument::Raw(minb) } else { CallArgument::Raw(vec![]) }
+                                }
                             }
                             // keep as is
                             (_, other) => other,
@@ -211,6 +223,25 @@ fn minimal_bcs_for_typetag(ty: &TypeTag) -> Option<Vec<u8>> {
             }
             None
         }
+        TypeTag::Function(_) => None,
+    }
+}
+
+fn expected_fixed_len_bytes(tag: &TypeTag) -> Option<usize> {
+    match tag {
+        TypeTag::Bool => Some(1),
+        TypeTag::U8 => Some(1),
+        TypeTag::U16 => Some(2),
+        TypeTag::U32 => Some(4),
+        TypeTag::U64 => Some(8),
+        TypeTag::U128 => Some(16),
+        TypeTag::U256 => Some(32),
+        // Aptos addresses are 32 bytes
+        TypeTag::Address => Some(32),
+        // variable size below
+        TypeTag::Signer => None,
+        TypeTag::Vector(_) => None,
+        TypeTag::Struct(_) => None,
         TypeTag::Function(_) => None,
     }
 }
