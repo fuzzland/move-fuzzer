@@ -2,17 +2,16 @@ use std::borrow::Cow;
 use std::collections::HashSet;
 
 use aptos_dynamic_transaction_composer::CallArgument;
+use aptos_move_binary_format::access::ModuleAccess;
 use aptos_move_core_types::account_address::AccountAddress;
 use aptos_move_core_types::identifier::Identifier;
-use aptos_move_core_types::language_storage::ModuleId;
+use aptos_move_core_types::language_storage::{ModuleId, TypeTag};
+use aptos_move_core_types::value::MoveValue;
+use aptos_move_vm_runtime::ModuleStorage;
 use libafl::mutators::{MutationResult, Mutator};
 use libafl::state::HasRand;
 use libafl_bolts::rands::Rand;
 use libafl_bolts::Named;
-use aptos_move_binary_format::access::ModuleAccess;
-use aptos_move_core_types::language_storage::TypeTag;
-use aptos_move_core_types::value::MoveValue;
-use aptos_move_vm_runtime::ModuleStorage;
 
 use crate::input::{AptosFuzzerInput, Call};
 use crate::state::AptosFuzzerState;
@@ -41,7 +40,9 @@ impl AptosFuzzerMutator {
                         }
                     }
                 }
-                if Self::mutate_byte_vector(bytes, state) { mutated = true; }
+                if Self::mutate_byte_vector(bytes, state) {
+                    mutated = true;
+                }
             }
         }
 
@@ -62,19 +63,30 @@ impl AptosFuzzerMutator {
                 }
                 // For vector<T> with T != u8, perform structured mutation with valid BCS
                 let choice = state.rand_mut().next() % 3;
-                let len = match choice { 0 => 0usize, 1 => 1usize, _ => 2usize };
+                let len = match choice {
+                    0 => 0usize,
+                    1 => 1usize,
+                    _ => 2usize,
+                };
                 let mut elems = Vec::with_capacity(len);
                 for _ in 0..len {
                     if let Some(tag) = Self::token_to_typetag_primitive(inner) {
                         // generate a small random element for primitive types
                         let mv = Self::random_move_value_for_tag(&tag, state);
-                        if let Some(mv) = mv { elems.push(mv) } else { elems.push(MoveValue::U8(0)) }
+                        if let Some(mv) = mv {
+                            elems.push(mv)
+                        } else {
+                            elems.push(MoveValue::U8(0))
+                        }
                     } else {
                         elems.push(MoveValue::U8(0));
                     }
                 }
                 let mv = MoveValue::Vector(elems);
-                if let Some(bcs) = mv.simple_serialize() { *bytes = bcs; return true; }
+                if let Some(bcs) = mv.simple_serialize() {
+                    *bytes = bcs;
+                    return true;
+                }
                 false
             }
             // For fixed-size primitives, clamp length to expected and fill random
@@ -82,7 +94,9 @@ impl AptosFuzzerMutator {
                 let tag = Self::token_to_typetag_primitive(tok).unwrap();
                 if let Some(expected) = Self::expected_fixed_len_bytes(&tag) {
                     let mut v = vec![0u8; expected];
-                    for b in v.iter_mut() { *b = (state.rand_mut().next() & 0xFF) as u8; }
+                    for b in v.iter_mut() {
+                        *b = (state.rand_mut().next() & 0xFF) as u8;
+                    }
                     *bytes = v;
                     return true;
                 }
@@ -92,9 +106,7 @@ impl AptosFuzzerMutator {
         }
     }
 
-    fn token_to_typetag_primitive(
-        tok: &aptos_move_binary_format::file_format::SignatureToken,
-    ) -> Option<TypeTag> {
+    fn token_to_typetag_primitive(tok: &aptos_move_binary_format::file_format::SignatureToken) -> Option<TypeTag> {
         use aptos_move_binary_format::file_format::SignatureToken as ST;
         match tok {
             ST::Bool => Some(TypeTag::Bool),
@@ -138,7 +150,10 @@ impl AptosFuzzerMutator {
         }
     }
 
-    fn param_tokens_for_call(state: &AptosFuzzerState, call: &Call) -> Option<Vec<aptos_move_binary_format::file_format::SignatureToken>> {
+    fn param_tokens_for_call(
+        state: &AptosFuzzerState,
+        call: &Call,
+    ) -> Option<Vec<aptos_move_binary_format::file_format::SignatureToken>> {
         let cm = state
             .aptos_state()
             .unmetered_get_deserialized_module(call.module_id.address(), call.module_id.name())

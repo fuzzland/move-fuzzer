@@ -151,9 +151,10 @@ fn main() {
     //     println!("Discovered solutions:");
     //     for input in solutions {
     //         println!("  {:?}", input);
-    //         if let Some(execution_path) = state.get_solution_execution_path(&input) {
-    //             println!("    Execution path: {:?}", execution_path);
-    //             if let Some(path_id) = state.get_solution_execution_path_id(&input) {
+    //         if let Some(execution_path) =
+    // state.get_solution_execution_path(&input) {             println!("
+    // Execution path: {:?}", execution_path);             if let
+    // Some(path_id) = state.get_solution_execution_path_id(&input) {
     //                 if state.abort_code_paths.contains(&path_id) {
     //                     println!("    Found InvariantViolation!");
     //                 }
