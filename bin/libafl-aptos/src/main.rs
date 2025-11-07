@@ -6,8 +6,7 @@ use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 use aptos_fuzzer::{
-    AbortCodeObjective, AptosFuzzerMutator, AptosFuzzerState, AptosMoveExecutor,
-    ShiftOverflowObjective,
+    AbortCodeObjective, AptosFuzzerMutator, AptosFuzzerState, AptosMoveExecutor, ShiftOverflowObjective,
 };
 use clap::Parser;
 use libafl::corpus::Corpus;
@@ -25,13 +24,13 @@ use utils::print_fuzzer_stats;
 #[derive(Debug, Parser)]
 #[command(author, version, about = "LibAFL-based fuzzer for Aptos Move modules")]
 struct Cli {
-    /// Path to an ABI file or directory to seed initial inputs
-    #[arg(long = "abi-path", value_name = "ABI_PATH")]
-    abi_path: Option<PathBuf>,
-
     /// Path to a compiled Move module to publish before fuzzing
     #[arg(long = "module-path", value_name = "MODULE_PATH")]
-    module_path: Option<PathBuf>,
+    module_path: PathBuf,
+
+    /// Path to a MIR JSON file to initialize corpus
+    #[arg(long = "mir-path", value_name = "MIR_PATH")]
+    mir_path: PathBuf,
 
     /// Timeout in seconds (0 = no timeout, run indefinitely)
     #[arg(long = "timeout", short = 't', default_value = "0")]
@@ -57,15 +56,9 @@ fn main() {
     let mut mgr = SimpleEventManager::new(mon);
     let scheduler = QueueScheduler::new();
 
-    let abi = cli
-        .abi_path
-        .clone()
-        .unwrap_or_else(|| panic!("--abi-path is required (no fallback)."));
-    let module = cli
-        .module_path
-        .clone()
-        .unwrap_or_else(|| panic!("--module-path is required (no fallback)."));
-    let mut state = AptosFuzzerState::new(Some(abi), Some(module));
+    // Initialize state from MIR file
+    let mut state = AptosFuzzerState::load_from_mir(Some(cli.mir_path.clone()), Some(cli.module_path.clone()));
+
     let _ = feedback.init_state(&mut state);
     let mut fuzzer = StdFuzzer::new(scheduler, feedback, objective);
 
@@ -153,22 +146,23 @@ fn main() {
         total_instructions_executed,
         total_possible_edges,
     );
-    let solutions = state.take_solutions();
-    if !solutions.is_empty() {
-        println!("Discovered solutions:");
-        for input in solutions {
-            println!("  {:?}", input);
-            if let Some(execution_path) = state.get_solution_execution_path(&input) {
-                println!("    Execution path: {:?}", execution_path);
-                if let Some(path_id) = state.get_solution_execution_path_id(&input) {
-                    if state.abort_code_paths.contains(&path_id) {
-                        println!("    Found InvariantViolation!");
-                    }
-                    if state.shift_overflow_paths.contains(&path_id) {
-                        println!("    Found ShiftOverflow!");
-                    }
-                }
-            }
-        }
-    }
+    // let solutions = state.take_solutions();
+    // if !solutions.is_empty() {
+    //     println!("Discovered solutions:");
+    //     for input in solutions {
+    //         println!("  {:?}", input);
+    //         if let Some(execution_path) =
+    // state.get_solution_execution_path(&input) {             println!("
+    // Execution path: {:?}", execution_path);             if let
+    // Some(path_id) = state.get_solution_execution_path_id(&input) {
+    //                 if state.abort_code_paths.contains(&path_id) {
+    //                     println!("    Found InvariantViolation!");
+    //                 }
+    //                 if state.shift_overflow_paths.contains(&path_id) {
+    //                     println!("    Found ShiftOverflow!");
+    //                 }
+    //             }
+    //         }
+    //     }
+    // }
 }

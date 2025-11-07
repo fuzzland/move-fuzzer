@@ -26,10 +26,15 @@ aptos-gas-schedule = { workspace = true }
 aptos-cached-packages = { path = "../../external/aptos-core/aptos-move/framework/cached-packages" }
 bytes = { workspace = true }
 
+# For generating batched Script payloads from function calls
+aptos-dynamic-transaction-composer = { path = "../../external/aptos-core/aptos-move/script-composer" }
+
 libafl = { workspace = true }
 libafl_bolts = { workspace = true }
 serde = { workspace = true }
+serde_json = { workspace = true }
 serde_yaml = "0.9"
 bcs = { workspace = true }
+hex = { workspace = true }
 dashmap = { workspace = true }
 anyhow = { workspace = true }

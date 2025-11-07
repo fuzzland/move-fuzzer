@@ -300,6 +300,7 @@ dependencies = [
  "anyhow",
  "aptos-config",
  "aptos-crypto",
+ "aptos-intent",
  "aptos-logger",
  "aptos-openapi",
  "aptos-resource-viewer",
@@ -687,6 +688,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "aptos-dynamic-transaction-composer"
+version = "0.1.4"
+dependencies = [
+ "anyhow",
+ "bcs 0.1.4",
+ "getrandom 0.2.16",
+ "move-binary-format",
+ "move-bytecode-verifier",
+ "move-core-types",
+ "serde",
+ "serde_bytes",
+ "wasm-bindgen",
+ "wasm-bindgen-futures",
+]
+
+[[package]]
 name = "aptos-event-notifications"
 version = "0.1.0"
 dependencies = [
@@ -890,6 +907,7 @@ dependencies = [
  "aptos-config",
  "aptos-crypto",
  "aptos-db",
+ "aptos-dynamic-transaction-composer",
  "aptos-executor",
  "aptos-gas-schedule",
  "aptos-native-interface",
@@ -903,6 +921,7 @@ dependencies = [
  "bcs 0.1.6",
  "bytes",
  "dashmap 6.1.0",
+ "hex",
  "libafl",
  "libafl_bolts",
  "move-binary-format",
@@ -911,6 +930,7 @@ dependencies = [
  "move-vm-runtime",
  "move-vm-types",
  "serde",
+ "serde_json",
  "serde_yaml 0.9.34+deprecated",
 ]
 
@@ -1060,6 +1080,27 @@ dependencies = [
 [[package]]
 name = "aptos-infallible"
 version = "0.1.0"
+
+[[package]]
+name = "aptos-intent"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "bcs 0.1.4",
+ "bytes",
+ "getrandom 0.2.16",
+ "hex",
+ "move-binary-format",
+ "move-bytecode-verifier",
+ "move-core-types",
+ "reqwest",
+ "reqwest-wasm",
+ "serde",
+ "serde_bytes",
+ "serde_json",
+ "wasm-bindgen",
+ "wasm-bindgen-futures",
+]
 
 [[package]]
 name = "aptos-jellyfish-merkle"
@@ -4469,8 +4510,10 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "335ff9f135e4384c8150d6f27c6daed433577f86b4750418338c01a1a2528592"
 dependencies = [
  "cfg-if",
+ "js-sys",
  "libc",
  "wasi 0.11.1+wasi-snapshot-preview1",
+ "wasm-bindgen",
 ]
 
 [[package]]
@@ -8323,7 +8366,45 @@ dependencies = [
  "wasm-streams",
  "web-sys",
  "webpki-roots",
- "winreg",
+ "winreg 0.50.0",
+]
+
+[[package]]
+name = "reqwest-wasm"
+version = "0.11.16"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "59fdca8934fccbd5aec3e208bdb5a76107ce8690aa51c6c292c31f21541b52b9"
+dependencies = [
+ "base64 0.13.1",
+ "bytes",
+ "encoding_rs",
+ "futures",
+ "futures-core",
+ "futures-util",
+ "h2 0.3.27",
+ "http 0.2.12",
+ "http-body 0.4.6",
+ "hyper 0.14.32",
+ "hyper-tls",
+ "ipnet",
+ "js-sys",
+ "log",
+ "mime",
+ "native-tls",
+ "once_cell",
+ "percent-encoding",
+ "pin-project-lite",
+ "serde",
+ "serde_json",
+ "serde_urlencoded",
+ "tokio",
+ "tokio-native-tls",
+ "tower-service",
+ "url",
+ "wasm-bindgen",
+ "wasm-bindgen-futures",
+ "web-sys",
+ "winreg 0.10.1",
 ]
 
 [[package]]
@@ -11364,6 +11445,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "21a0236b59786fed61e2a80582dd500fe61f18b5dca67a4a067d0bc9039339cf"
 dependencies = [
  "memchr",
+]
+
+[[package]]
+name = "winreg"
+version = "0.10.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "80d0f4e272c85def139476380b12f9ac60926689dd2e01d4923222f40580869d"
+dependencies = [
+ "winapi 0.3.9",
 ]
 
 [[package]]
