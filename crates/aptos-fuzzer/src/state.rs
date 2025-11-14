@@ -16,7 +16,7 @@ use libafl::{HasMetadata, HasNamedMetadata};
 use libafl_bolts::rands::StdRand;
 use libafl_bolts::serdeany::{NamedSerdeAnyMap, SerdeAnyMap};
 
-use crate::executor::aptos_custom_state::AptosCustomState;
+use crate::executor::aptos_custom_state::{AptosCustomState, LayerSnapshot};
 use crate::input::AptosFuzzerInput;
 use crate::mir::Chain;
 
@@ -44,6 +44,10 @@ pub struct AptosFuzzerState {
     execution_paths_by_input: HashMap<AptosFuzzerInput, ExecutionPathRecord>,
     /// Execution path IDs observed so far to deduplicate interesting inputs
     seen_execution_paths: HashSet<u64>,
+    /// Snapshot from the most recent execution (pending promotion)
+    pending_snapshot: Option<LayerSnapshot>,
+    /// Interesting per-path snapshots
+    snapshots_by_path: HashMap<u64, LayerSnapshot>,
     /// Metadata stored for this state by one of the components
     metadata: SerdeAnyMap,
     /// Metadata stored with names
@@ -95,6 +99,8 @@ impl AptosFuzzerState {
             current_execution_path_id: None,
             execution_paths_by_input: HashMap::new(),
             seen_execution_paths: HashSet::new(),
+            pending_snapshot: None,
+            snapshots_by_path: HashMap::new(),
             abort_code_paths: HashSet::new(),
             shift_overflow_paths: HashSet::new(),
             metadata: SerdeAnyMap::new(),
@@ -255,6 +261,24 @@ impl AptosFuzzerState {
 
     pub fn has_seen_execution_path(&self, path_id: u64) -> bool {
         self.seen_execution_paths.contains(&path_id)
+    }
+
+    pub fn discard_pending_snapshot(&mut self) {
+        self.pending_snapshot = None;
+    }
+
+    pub fn set_pending_snapshot(&mut self, snapshot: Option<LayerSnapshot>) {
+        self.pending_snapshot = snapshot;
+    }
+
+    pub fn promote_pending_snapshot(&mut self, path_id: u64) {
+        if let Some(snapshot) = self.pending_snapshot.take() {
+            self.snapshots_by_path.insert(path_id, snapshot);
+        }
+    }
+
+    pub fn snapshot_for_path(&self, path_id: &u64) -> Option<&LayerSnapshot> {
+        self.snapshots_by_path.get(path_id)
     }
 
     pub fn get_solution_execution_path(&self, input: &AptosFuzzerInput) -> Option<Vec<u32>> {
