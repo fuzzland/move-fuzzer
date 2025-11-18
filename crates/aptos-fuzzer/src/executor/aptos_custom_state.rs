@@ -666,6 +666,7 @@ impl AptosCustomState {
             scripts_deser: DashMap::new(),
             scripts_verified: DashMap::new(),
             runtime_environment,
+            layers: Vec::new(),
         };
 
         // Load and deploy Aptos framework bundle (includes move-stdlib, aptos-stdlib,
