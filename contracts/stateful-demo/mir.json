@@ -1,0 +1,127 @@
+{
+    "calls": [
+      {
+        "id": 0,
+        "module_addr": "0000000000000000000000000000000000000000000000000000000000000042",
+        "module": "counter_check",
+        "function": "initialize",
+        "ty_args": [],
+        "args": [
+          {
+            "Var": {
+              "id": 0,
+              "ty": "Signer"
+            }
+          }
+        ],
+        "acquires": [],
+        "requires": [
+          {
+            "Exists": {
+              "struct_name": "@Counter",
+              "addr": {
+                "Var": {
+                  "id": 0,
+                  "ty": "Signer"
+                }
+              }
+            }
+          }
+        ],
+        "effects": [
+          {
+            "Creates": {
+              "struct_name": "@Counter",
+              "addr": {
+                "Literal": "unknown"
+              }
+            }
+          }
+        ],
+        "ret": null
+      },
+      {
+        "id": 1,
+        "module_addr": "0000000000000000000000000000000000000000000000000000000000000042",
+        "module": "counter_check",
+        "function": "check_bug",
+        "ty_args": [],
+        "args": [
+          {
+            "Var": {
+              "id": 0,
+              "ty": "Signer"
+            }
+          }
+        ],
+        "acquires": [
+          "@Counter"
+        ],
+        "requires": [
+          {
+            "Exists": {
+              "struct_name": "@Counter",
+              "addr": {
+                "Var": {
+                  "id": 0,
+                  "ty": "Signer"
+                }
+              }
+            }
+          }
+        ],
+        "effects": [],
+        "ret": null
+      },
+      {
+        "id": 2,
+        "module_addr": "0000000000000000000000000000000000000000000000000000000000000042",
+        "module": "counter_check",
+        "function": "increment",
+        "ty_args": [],
+        "args": [
+          {
+            "Var": {
+              "id": 0,
+              "ty": "Signer"
+            }
+          }
+        ],
+        "acquires": [
+          "@Counter"
+        ],
+        "requires": [
+          {
+            "Exists": {
+              "struct_name": "@Counter",
+              "addr": {
+                "Var": {
+                  "id": 0,
+                  "ty": "Signer"
+                }
+              }
+            }
+          }
+        ],
+        "effects": [],
+        "ret": null
+      }
+    ],
+    "struct_defs": {
+      "@Counter": {
+        "tag": {
+          "address": "0000000000000000000000000000000000000000000000000000000000000042",
+          "module": "counter_check",
+          "name": "Counter",
+          "ty_args": []
+        },
+        "fields": [
+          {
+            "name": "val",
+            "ty": "U64"
+          }
+        ]
+      }
+    },
+    "metadata": {}
+  }
