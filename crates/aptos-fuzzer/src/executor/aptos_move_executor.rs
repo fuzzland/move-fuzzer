@@ -377,6 +377,7 @@ impl<EM, Z> Executor<EM, AptosFuzzerInput, AptosFuzzerState, Z> for AptosMoveExe
         input: &AptosFuzzerInput,
     ) -> Result<ExitKind, libafl::Error> {
         state.clear_current_execution_path();
+        state.discard_pending_snapshot();
         if input.calls.is_empty() {
             return Ok(ExitKind::Ok);
         }
@@ -390,6 +391,7 @@ impl<EM, Z> Executor<EM, AptosFuzzerInput, AptosFuzzerState, Z> for AptosMoveExe
             Some(p) => p,
             None => return Ok(ExitKind::Ok),
         };
+        state.aptos_state_mut().push_layer();
         let (result, outcome, pcs, shift_losses) =
             self.execute_transaction(payload, state.aptos_state(), Some(FUZZER_SENDER));
         all_pcs.extend(pcs);
@@ -397,7 +399,7 @@ impl<EM, Z> Executor<EM, AptosFuzzerInput, AptosFuzzerState, Z> for AptosMoveExe
         final_outcome = outcome;
         final_result = Some(result);
         *state.executions_mut() += 1;
-        match final_result.unwrap() {
+        let exit_kind = match final_result.unwrap() {
             Ok(result) => {
                 self.success_count += 1;
                 let map = self.observers.0.as_slice_mut();
@@ -433,7 +435,7 @@ impl<EM, Z> Executor<EM, AptosFuzzerInput, AptosFuzzerState, Z> for AptosMoveExe
                 } else {
                     self.observers.1 .0.set_last(None);
                 }
-                Ok(ExitKind::Ok)
+                ExitKind::Ok
             }
             Err(vm_status) => {
                 self.error_count += 1;
@@ -459,17 +461,19 @@ impl<EM, Z> Executor<EM, AptosFuzzerInput, AptosFuzzerState, Z> for AptosMoveExe
                 } else {
                     self.observers.1 .0.set_last(None);
                 }
-                let exit_kind = match final_outcome {
+                match final_outcome {
                     ExecOutcomeKind::Ok => ExitKind::Ok,
                     ExecOutcomeKind::MoveAbort(_) => ExitKind::Ok,
                     ExecOutcomeKind::OutOfGas => ExitKind::Ok,
                     ExecOutcomeKind::OtherError => ExitKind::Ok,
                     ExecOutcomeKind::InvariantViolation => ExitKind::Crash,
                     ExecOutcomeKind::Panic => ExitKind::Crash,
-                };
-                Ok(exit_kind)
+                }
             }
-        }
+        };
+        let snapshot = state.aptos_state_mut().pop_layer();
+        state.set_pending_snapshot(snapshot);
+        Ok(exit_kind)
     }
 }
 

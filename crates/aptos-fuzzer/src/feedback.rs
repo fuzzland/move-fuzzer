@@ -69,6 +69,7 @@ where
                     return Ok(false);
                 }
                 state.record_current_execution_path_for(input);
+                state.promote_pending_snapshot(path_id);
             }
             return Ok(true);
         }
@@ -89,6 +90,7 @@ where
                         }
                         state.abort_code_paths.insert(path_id);
                         state.record_current_execution_path_for(input);
+                        state.promote_pending_snapshot(path_id);
                     }
                     return Ok(true);
                 }
@@ -100,6 +102,7 @@ where
                     }
                     state.abort_code_paths.insert(path_id);
                     state.record_current_execution_path_for(input);
+                    state.promote_pending_snapshot(path_id);
                 }
                 return Ok(true);
             }
@@ -168,6 +171,7 @@ where
                 }
                 state.shift_overflow_paths.insert(path_id);
                 state.record_current_execution_path_for(input);
+                state.promote_pending_snapshot(path_id);
             }
             return Ok(true);
         }
